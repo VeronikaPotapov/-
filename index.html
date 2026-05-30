@@ -3,237 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Финансовый ассистент проекта: прогноз актов и поступлений</title>
+  <title>Личный кабинет РП</title>
   <link rel="stylesheet" href="./styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
-  <main class="app-shell">
-    <section class="intro">
+  <div class="app-shell">
+    <header class="topbar">
       <div>
         <p class="eyebrow">MVP-прототип</p>
-        <h1>Финансовый ассистент проекта: прогноз актов и поступлений</h1>
-        <p class="lead">Быстро показывает, какие плановые поступления выглядят рискованно и почему.</p>
+        <h1>Личный кабинет РП</h1>
+        <p class="lead">Операционный навигатор проекта: актуальные действия по неделе, месяцу и текущей стадии.</p>
       </div>
-      <div class="security-note">
-        Используйте обезличенные или тестовые данные. Файл обрабатывается в браузере и не отправляется на сервер.
+      <div class="view-note">
+        Данные хранятся локально в браузере. Сервер и авторизация в MVP не используются.
       </div>
-    </section>
+    </header>
 
-    <section class="upload-panel" aria-labelledby="upload-title">
-      <div>
-        <h2 id="upload-title">Загрузка бюджета</h2>
-        <p>Поддерживаются листы «Проект», «Плановые документы», «Фактические документы».</p>
-      </div>
-      <label class="drop-zone" for="fileInput" id="dropZone">
-        <input id="fileInput" type="file" accept=".xlsx,.xls,.xlsm">
-        <span class="drop-title">Выберите Excel-файл</span>
-        <span class="drop-hint">или перетащите его сюда</span>
-      </label>
-      <div class="status-row">
-        <span class="status-dot" id="statusDot"></span>
-        <span id="statusText">Файл не загружен</span>
-      </div>
-      <div class="error-box hidden" id="errorBox"></div>
-    </section>
-
-    <section class="results hidden" id="results">
-      <section class="project-card" aria-labelledby="project-title">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Карточка проекта</p>
-            <h2 id="project-title">Проект</h2>
-          </div>
-        </div>
-        <dl class="project-grid compact" id="projectGrid"></dl>
-      </section>
-
-      <section class="assistant-conclusion" aria-labelledby="assistant-title">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Вывод ассистента</p>
-            <h2 id="assistant-title">Что требует проверки</h2>
-          </div>
-        </div>
-        <p class="assistant-text" id="assistantConclusion"></p>
-      </section>
-
-      <section class="summary-section" aria-labelledby="assistant-kpi-title">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Ключевые показатели</p>
-            <h2 id="assistant-kpi-title">Плановые поступления</h2>
-          </div>
-        </div>
-        <div class="summary-grid" id="assistantKpiGrid"></div>
-      </section>
-
-      <section class="risk-section" aria-labelledby="risky-payments-title">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Главный список</p>
-            <h2 id="risky-payments-title">Поступления, требующие проверки</h2>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table class="risky-payments-table">
-            <thead>
-              <tr>
-                <th>Стадия проекта</th>
-                <th>Сумма поступления</th>
-                <th>Плановая дата поступления</th>
-                <th>Прогнозная дата ассистента</th>
-                <th>Уровень риска</th>
-                <th>Причина риска</th>
-                <th>Подробнее</th>
-              </tr>
-            </thead>
-            <tbody id="riskyPaymentsTable"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <details class="debug-section">
-        <summary>Технические данные / отладка</summary>
-
-        <section class="summary-section" aria-labelledby="summary-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Сводка</p>
-              <h2 id="summary-title">План и факт по актам и поступлениям</h2>
-            </div>
-          </div>
-          <div class="summary-grid" id="summaryGrid"></div>
-        </section>
-
-        <section class="risk-section" aria-labelledby="risk-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Первые финансовые риски</p>
-              <h2 id="risk-title">Вероятностная связь актов и поступлений</h2>
-              <p class="section-note">Проверка группирует документы по стадии проекта, учитывает суммы, даты и признаки в комментариях. При неоднозначности ассистент не назначает точную пару и отправляет связь на ручную проверку.</p>
-            </div>
-          </div>
-          <div class="risk-summary" id="riskSummary"></div>
-          <div class="table-wrap">
-            <table class="risk-table">
-              <thead>
-                <tr>
-                  <th>Тип связи</th>
-                  <th>Стадия проекта</th>
-                  <th>Акты</th>
-                  <th>Поступления</th>
-                  <th>Суммы</th>
-                  <th>Даты</th>
-                  <th>Уверенность</th>
-                  <th>Комментарий ассистента</th>
-                </tr>
-                <tr class="filter-row">
-                  <th><input type="search" data-risk-filter="connectionType" aria-label="Фильтр по типу связи"></th>
-                  <th><input type="search" data-risk-filter="stage" aria-label="Фильтр по стадии проекта"></th>
-                  <th><input type="search" data-risk-filter="acts" aria-label="Фильтр по актам"></th>
-                  <th><input type="search" data-risk-filter="payments" aria-label="Фильтр по поступлениям"></th>
-                  <th><input type="search" data-risk-filter="amounts" aria-label="Фильтр по суммам"></th>
-                  <th><input type="search" data-risk-filter="dates" aria-label="Фильтр по датам"></th>
-                  <th><input type="search" data-risk-filter="confidence" aria-label="Фильтр по уверенности"></th>
-                  <th><input type="search" data-risk-filter="reason" aria-label="Фильтр по комментарию"></th>
-                </tr>
-              </thead>
-              <tbody id="riskTable"></tbody>
-            </table>
-          </div>
-          <div class="table-actions">
-            <button class="table-toggle hidden" id="riskToggleButton" type="button">Показать все</button>
-            <button class="table-toggle muted hidden" id="riskFilterReset" type="button">Сбросить фильтры</button>
-          </div>
-        </section>
-
-        <section class="table-section" aria-labelledby="planned-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Плановые документы</p>
-              <h2 id="planned-title">Статьи 3.* и 2.*</h2>
-            </div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Стадия проекта</th>
-                  <th>Статья бюджета</th>
-                  <th>Тип документа</th>
-                  <th>Сумма, без НДС</th>
-                  <th>Дата документа</th>
-                  <th>Комментарий</th>
-                  <th>Сопост. с фактом</th>
-                  <th>Распределено полностью</th>
-                  <th>Замечание ассистента</th>
-                </tr>
-              </thead>
-              <tbody id="plannedTable"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="table-section" aria-labelledby="actual-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Фактические документы</p>
-              <h2 id="actual-title">Статьи 3.* и 2.*</h2>
-            </div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Дата</th>
-                  <th>Номер документа</th>
-                  <th>Статья бюджета ЦУП</th>
-                  <th>Сумма 1C, без НДС</th>
-                  <th>Контрагент</th>
-                  <th>Комментарий</th>
-                  <th>Статус 1C</th>
-                  <th>Замечание ассистента</th>
-                </tr>
-              </thead>
-              <tbody id="actualTable"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="table-section" aria-labelledby="group-analysis-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Плановые документы</p>
-              <h2 id="group-analysis-title">Анализ групп актов и поступлений</h2>
-            </div>
-          </div>
-          <div class="table-wrap">
-            <table class="group-analysis-table">
-              <thead>
-                <tr>
-                  <th>Группа</th>
-                  <th>Стадия проекта</th>
-                  <th>Признаки из комментария</th>
-                  <th>Кол-во актов</th>
-                  <th>Сумма актов</th>
-                  <th>Период актов</th>
-                  <th>Кол-во поступлений</th>
-                  <th>Сумма поступлений</th>
-                  <th>Период поступлений</th>
-                  <th>Разница</th>
-                  <th>Тип связи</th>
-                  <th>Уровень риска</th>
-                  <th>Комментарий ассистента</th>
-                </tr>
-              </thead>
-              <tbody id="groupAnalysisTable"></tbody>
-            </table>
-          </div>
-        </section>
-      </details>
-    </section>
-  </main>
+    <main id="app"></main>
+  </div>
 </body>
 </html>
