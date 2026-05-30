@@ -425,6 +425,11 @@ textarea {
   color: var(--blue);
 }
 
+.badge.frequency {
+  background: #eaf7f6;
+  color: var(--accent-dark);
+}
+
 .badge.done {
   background: #e8f6ee;
   color: var(--ok);
@@ -453,18 +458,46 @@ textarea {
 
 .details-body {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   margin-top: 12px;
   color: #34444d;
   line-height: 1.45;
 }
 
-.action-controls {
+.instruction-block {
   display: grid;
-  grid-template-columns: minmax(160px, 220px) 1fr auto;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.instruction-block h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.instruction-block p {
+  margin: 0;
+}
+
+.instruction-block a {
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+
+.result-block {
+  border-color: #bddbd6;
+  background: #f0faf8;
+}
+
+.status-controls {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) auto;
   gap: 10px;
-  align-items: start;
-  margin-top: 14px;
+  align-items: center;
 }
 
 .participants {
@@ -548,7 +581,7 @@ textarea {
   .meta-grid,
   .kpi-grid,
   .filters,
-  .action-controls,
+  .status-controls,
   .participant {
     grid-template-columns: 1fr;
   }

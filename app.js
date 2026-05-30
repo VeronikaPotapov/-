@@ -14,7 +14,7 @@ const STATUS_LABELS = {
 };
 
 const FREQUENCY_LABELS = {
-  once: "Разовое",
+  once: "Однократно",
   weekly: "Еженедельно",
   monthly: "Ежемесячно",
   biweekly: "Раз в две недели",
@@ -369,7 +369,7 @@ function renderProjectScreen(project) {
     <section class="panel">
       ${selectedTab === "all" ? renderFilters() : ""}
       <div class="actions-grid">
-        ${tabActions.map((item) => renderActionCard(item, project, readonly, false)).join("") || '<div class="empty">Нет действий для этого раздела.</div>'}
+        ${tabActions.map((item) => renderActionCard(item, project, readonly, false)).join("") || '<div class="empty">Нет актуальных действий для этого раздела.</div>'}
       </div>
     </section>
 
@@ -422,6 +422,9 @@ function renderActionCard(actionItem, project, readonly, compact) {
   const effectiveStatus = status?.status || "not_started";
   const comment = status?.comment || "";
   const classes = `action-card ${effectiveStatus}`;
+  const helperLink = actionItem.helperLink
+    ? `<a href="${escapeHtml(actionItem.helperLink)}" target="_blank" rel="noreferrer">Открыть материал</a>`
+    : "";
 
   return `
     <article class="${classes}">
@@ -430,28 +433,49 @@ function renderActionCard(actionItem, project, readonly, compact) {
           <h3>${escapeHtml(actionItem.title)}</h3>
           <div class="badges">
             <span class="badge">${escapeHtml(actionItem.category)}</span>
-            <span class="badge ${actionItem.priority}">${PRIORITY_LABELS[actionItem.priority]}</span>
+            <span class="badge frequency">${escapeHtml(FREQUENCY_LABELS[actionItem.frequencyType])}</span>
+            <span class="badge ${actionItem.priority}">Приоритет: ${PRIORITY_LABELS[actionItem.priority]}</span>
             <span class="badge ${effectiveStatus === "done" ? "done" : effectiveStatus === "in_progress" ? "progress" : ""}">${STATUS_LABELS[effectiveStatus]}</span>
           </div>
         </div>
       </div>
       <p class="action-summary">${escapeHtml(actionItem.trigger)}</p>
       <details class="details" ${compact ? "" : "open"}>
-        <summary>Детали действия</summary>
+        <summary>Подробнее</summary>
         <div class="details-body">
-          <div><strong>Что сделать:</strong> ${escapeHtml(actionItem.description)}</div>
-          <div><strong>Критерий результата:</strong> ${escapeHtml(actionItem.goodResult)}</div>
-          <div><strong>Периодичность:</strong> ${escapeHtml(formatFrequency(actionItem))}</div>
-          <div><strong>Подсказка:</strong> ${escapeHtml(actionItem.helperText)}</div>
+          <section class="instruction-block">
+            <h4>Когда выполнять</h4>
+            <p>${escapeHtml(actionItem.trigger)}</p>
+            <p class="muted">${escapeHtml(formatFrequency(actionItem))}</p>
+          </section>
+          <section class="instruction-block">
+            <h4>Что сделать</h4>
+            <p>${escapeHtml(actionItem.description)}</p>
+          </section>
+          <section class="instruction-block result-block">
+            <h4>Критерий хорошего результата</h4>
+            <p>${escapeHtml(actionItem.goodResult)}</p>
+          </section>
+          <section class="instruction-block">
+            <h4>Что может помочь</h4>
+            <p>${escapeHtml(actionItem.helperText || "Дополнительные материалы не указаны.")}</p>
+            ${helperLink}
+          </section>
+          <section class="instruction-block">
+            <h4>Комментарий по проекту</h4>
+            <textarea data-action-comment="${actionItem.id}" placeholder="Комментарий" ${readonly ? "disabled" : ""}>${escapeHtml(comment)}</textarea>
+          </section>
+          <section class="instruction-block">
+            <h4>Статус</h4>
+            <div class="status-controls">
+              <select data-action-status="${actionItem.id}" ${readonly ? "disabled" : ""}>
+                ${Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${effectiveStatus === value ? "selected" : ""}>${label}</option>`).join("")}
+              </select>
+              <button class="button small" data-action-done="${actionItem.id}" ${readonly || effectiveStatus === "done" ? "disabled" : ""}>Выполнено</button>
+            </div>
+          </section>
         </div>
       </details>
-      <div class="action-controls">
-        <select data-action-status="${actionItem.id}" ${readonly ? "disabled" : ""}>
-          ${Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${effectiveStatus === value ? "selected" : ""}>${label}</option>`).join("")}
-        </select>
-        <textarea data-action-comment="${actionItem.id}" placeholder="Комментарий" ${readonly ? "disabled" : ""}>${escapeHtml(comment)}</textarea>
-        <button class="button small" data-action-done="${actionItem.id}" ${readonly || effectiveStatus === "done" ? "disabled" : ""}>Выполнено</button>
-      </div>
     </article>
   `;
 }
