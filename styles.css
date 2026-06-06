@@ -1131,3 +1131,12 @@ textarea {
     grid-template-columns: 1fr 1fr;
   }
 }
+.project-card-actions {
+  display: grid;
+  gap: 8px;
+  min-width: 96px;
+}
+
+.project-card-actions .button {
+  width: 100%;
+}

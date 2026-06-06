@@ -413,7 +413,10 @@ function renderProjectsList() {
             <h3>${escapeHtml(project.title)}</h3>
             <p class="muted">${escapeHtml(project.client)}</p>
           </div>
-          <button class="button small secondary" data-select-project="${project.id}">Открыть</button>
+<div class="project-card-actions">
+  <button class="button small secondary" data-select-project="${project.id}" type="button">Открыть</button>
+  <button class="button small danger" data-delete-project="${project.id}" type="button">Удалить</button>
+</div>
         </div>
         <div class="badges">
           <span class="badge">${STAGE_LABELS[project.stage]}</span>
@@ -1021,6 +1024,9 @@ projectFormVisible = false;
 projectEditMode = false;
 render();
   }));
+  document.querySelectorAll("[data-delete-project]").forEach((button) => button.addEventListener("click", () => {
+  deleteProject(button.dataset.deleteProject);
+}));
 
   document.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click", () => {
     selectedTab = button.dataset.tab;
@@ -1123,6 +1129,28 @@ const project = {
   state.projects.unshift(project);
   selectedProjectId = project.id;
   projectFormVisible = false;
+  saveState();
+  render();
+}
+function deleteProject(projectId) {
+  const project = state.projects.find((item) => item.id === projectId);
+
+  if (!project) {
+    return;
+  }
+
+  if (!confirm(`Удалить проект «${project.title || "Без названия"}»? Все статусы действий, комментарии и участники проекта будут удалены.`)) {
+    return;
+  }
+
+  state.projects = state.projects.filter((item) => item.id !== projectId);
+
+  if (selectedProjectId === projectId) {
+    selectedProjectId = null;
+    selectedTab = "week";
+    projectEditMode = false;
+  }
+
   saveState();
   render();
 }
