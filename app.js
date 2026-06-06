@@ -217,23 +217,18 @@ function renderProfile() {
 }
 
 function renderCreateProject() {
-if (!projectFormVisible) {
-  return `
-    <section class="panel create-project-panel">
-      <button class="button" id="showProjectForm" type="button">Создать проект</button>
-    </section>
-  `;
-}
+  if (!isProfileComplete(state.userProfile)) {
+    return `
+      <section class="panel create-project-panel">
+        <button class="button" type="button" disabled>Создать проект</button>
+        <p class="muted create-project-hint">Сначала заполните профиль.</p>
+      </section>
+    `;
+  }
 
   if (!projectFormVisible) {
     return `
-      <section class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">Новый проект</p>
-            <h2>Создание проекта</h2>
-          </div>
-        </div>
+      <section class="panel create-project-panel">
         <button class="button" id="showProjectForm" type="button">Создать проект</button>
       </section>
     `;
@@ -243,7 +238,7 @@ if (!projectFormVisible) {
     <section class="panel">
       <div class="panel-heading">
         <div>
-          <p class="eyebrow">Мои проекты</p>
+          <p class="eyebrow">Новый проект</p>
           <h2>Создать проект</h2>
         </div>
       </div>
@@ -360,65 +355,105 @@ function renderProjectScreen(project) {
 
   return `
     <section class="panel compact-panel">
-      <button class="button secondary" id="backToProjects" type="button">Назад к моим проектам</button>
+      <button class="button secondary" id="backToProjects" type="button">← Назад к моим проектам</button>
     </section>
 
-    <section class="panel">
-      <div class="panel-heading">
-        <div>
+    <div class="project-page-layout">
+      <aside class="project-sidebar">
+        <section class="panel project-side-card">
           <p class="eyebrow">Проект</p>
           <h2>${escapeHtml(project.title)}</h2>
-        </div>
-      </div>
-      ${renderProjectDetails(project, readonly, progress)}
-      <div class="kpi-grid">
-        ${kpi("Открытые действия", kpis.open)}
-        ${kpi("В работе", kpis.inProgress)}
-        ${kpi("Выполненные", kpis.done)}
-        ${kpi("Прогресс", `${progress.percent}%`)}
-      </div>
-      ${renderProgress(progress)}
-    </section>
+          <div class="project-side-meta">
+            <div>
+              <span>Клиент</span>
+              <strong>${escapeHtml(project.client || "Не указан")}</strong>
+            </div>
+            <div>
+              <span>Тип</span>
+              <strong>${escapeHtml(project.projectType || "Не указан")}</strong>
+            </div>
+            <div>
+              <span>Стадия</span>
+              <strong>${escapeHtml(STAGE_LABELS[project.stage])}</strong>
+            </div>
+            <div>
+              <span>Период</span>
+              <strong>${formatDate(project.startDate)} — ${formatDate(project.endDate)}</strong>
+            </div>
+          </div>
+        </section>
 
-    <section class="panel navigator-note">
-      <p class="eyebrow">Навигатор</p>
-      <h2>Операционный навигатор проекта</h2>
-      <p class="lead">Навигатор показывает, какие операционные действия актуальны для РП сейчас, на этой неделе, в этом месяце и на текущей стадии проекта. Отмечайте выполненные действия — прогресс проекта будет обновляться автоматически.</p>
-    </section>
-
-    <section class="panel">
-      <div class="panel-heading">
-        <div>
+        <section class="panel project-side-card">
           <p class="eyebrow">Разделы</p>
           <h2>Операционные действия</h2>
-        </div>
-      </div>
-      <div class="tabs">
-        ${tabButton("now", "Сейчас")}
-        ${tabButton("week", "На этой неделе")}
-        ${tabButton("month", "В этом месяце")}
-        ${tabButton("stage", "На стадии проекта")}
-        ${tabButton("all", "Все действия")}
-      </div>
-    </section>
+          <div class="side-tabs">
+            ${tabButton("now", "Сейчас")}
+            ${tabButton("week", "На этой неделе")}
+            ${tabButton("month", "В этом месяце")}
+            ${tabButton("stage", "На стадии проекта")}
+            ${tabButton("all", "Все действия")}
+          </div>
+        </section>
 
-    <section class="panel">
-      ${selectedTab === "all" ? renderFilters() : ""}
-      <div class="actions-grid">
-        ${tabActions.map((item) => renderActionCard(item, project, readonly, false)).join("") || '<div class="empty">Нет актуальных действий для этого раздела.</div>'}
-      </div>
-    </section>
+        <section class="panel project-side-card">
+          <p class="eyebrow">Прогресс проекта</p>
+          <div class="side-progress-value">${progress.percent}%</div>
+          ${renderProgress(progress)}
+          <div class="side-kpis">
+            <div><span>Открытые</span><strong>${kpis.open}</strong></div>
+            <div><span>В работе</span><strong>${kpis.inProgress}</strong></div>
+            <div><span>Выполненные</span><strong>${kpis.done}</strong></div>
+          </div>
+        </section>
+      </aside>
 
-    <section class="panel">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">Доступ</p>
-          <h2>Участники и права</h2>
-        </div>
-      </div>
-      ${renderParticipants(project, readonly)}
-    </section>
+      <section class="workspace project-main-area">
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Карточка проекта</p>
+              <h2>${escapeHtml(project.title)}</h2>
+            </div>
+          </div>
+          ${renderProjectDetails(project, readonly, progress)}
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Действия</p>
+              <h2>${getCurrentTabTitle()}</h2>
+            </div>
+          </div>
+          ${selectedTab === "all" ? renderFilters() : ""}
+          <div class="actions-grid">
+            ${tabActions.map((item) => renderActionCard(item, project, readonly, false)).join("") || '<div class="empty">Нет актуальных действий для этого раздела.</div>'}
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Доступ</p>
+              <h2>Участники и права</h2>
+            </div>
+          </div>
+          ${renderParticipants(project, readonly)}
+        </section>
+      </section>
+    </div>
   `;
+}
+function getCurrentTabTitle() {
+  const titles = {
+    now: "Сейчас",
+    week: "На этой неделе",
+    month: "В этом месяце",
+    stage: "На стадии проекта",
+    all: "Все действия",
+  };
+
+  return titles[selectedTab] || "Операционные действия";
 }
 
 function renderProjectDetails(project, readonly, progress) {
