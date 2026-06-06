@@ -307,8 +307,8 @@ function renderCreateProject() {
         </div>
       </div>
       <form class="form-grid" id="projectForm">
-        <div class="field"><label>Название проекта</label><input id="projectTitle" name="title" required></div>
-        <div class="field"><label>Клиент</label><input name="client" required></div>
+        <div class="field"><label>Название проекта</label><input id="projectTitle" name="title" ></div>
+        <div class="field"><label>Клиент</label><input name="client" ></div>
         <div class="field"><label>Тип проекта</label><input name="projectType" placeholder="Внедрение, поддержка, внутренний продукт"></div>
         <div class="field">
           <label>Стадия</label>
@@ -431,12 +431,14 @@ function renderActionAdminCard(item) {
           <span class="badge">${escapeHtml(STAGE_LABELS[item.stage] || item.stage)}</span>
           <span class="badge">${escapeHtml(item.category || "Без категории")}</span>
           <span class="badge frequency">${escapeHtml(FREQUENCY_LABELS[item.frequencyType] || item.frequencyType)}</span>
-          <span class="badge ${item.priority}">${escapeHtml(PRIORITY_LABELS[item.priority] || item.priority)}</span>
           <span class="badge ${item.isActive === false ? "high" : "done"}">${item.isActive === false ? "Отключено" : "Активно"}</span>
         </div>
         <p class="muted">${escapeHtml(getActionScheduleText(item))}</p>
       </div>
-      <button class="button secondary small" data-edit-admin-action="${escapeHtml(item.id)}" type="button">Редактировать</button>
+      <div class="admin-card-actions">
+        <button class="button secondary small" data-edit-admin-action="${escapeHtml(item.id)}" type="button">Редактировать</button>
+        <button class="button danger small" data-delete-admin-action="${escapeHtml(item.id)}" type="button">Удалить</button>
+      </div>
     </article>
   `;
 }
@@ -444,23 +446,78 @@ function renderActionAdminCard(item) {
 function renderActionAdminForm(actionId, actions) {
   const isNew = actionId === "new";
   const item = isNew ? normalizeAction({}) : actions.find((actionItem) => actionItem.id === actionId);
+  const categories = [...new Set(actions.map((actionItem) => actionItem.category).filter(Boolean))].sort();
+
   if (!item) return "";
+
   return `
     <form class="form-grid admin-action-form" id="adminActionForm">
       <input type="hidden" name="id" value="${escapeHtml(isNew ? "" : item.id)}">
-      <div class="field"><label>Название действия</label><input name="title" value="${escapeHtml(item.title)}" required></div>
-      <div class="field"><label>Категория</label><input name="category" value="${escapeHtml(item.category)}" required></div>
-      <div class="field"><label>Стадия</label><select name="stage">${Object.entries(STAGE_LABELS).map(([value, label]) => `<option value="${value}" ${item.stage === value ? "selected" : ""}>${label}</option>`).join("")}</select></div>
-      <div class="field wide"><label>Триггер / когда актуально</label><textarea name="trigger" required>${escapeHtml(item.trigger)}</textarea></div>
-      <div class="field wide"><label>Что сделать</label><textarea name="description" required>${escapeHtml(item.description)}</textarea></div>
-      <div class="field wide"><label>Критерий хорошего результата</label><textarea name="goodResult" required>${escapeHtml(item.goodResult)}</textarea></div>
-      <div class="field wide"><label>Что может помочь</label><textarea name="helperText">${escapeHtml(item.helperText)}</textarea></div>
-      <div class="field wide"><label>Ссылка на материал</label><input name="helperLink" value="${escapeHtml(item.helperLink)}" placeholder="https://..."></div>
-      <div class="field"><label>Периодичность</label><select name="frequencyType">${Object.entries(FREQUENCY_LABELS).map(([value, label]) => `<option value="${value}" ${item.frequencyType === value ? "selected" : ""}>${label}</option>`).join("")}</select></div>
-      <div class="field"><label>День недели</label><select name="weekday"><option value="">Не задано</option>${Object.entries(WEEKDAY_LABELS).map(([value, label]) => `<option value="${value}" ${item.weekday === value ? "selected" : ""}>${label}</option>`).join("")}</select></div>
-      <div class="field"><label>Правило месяца</label><select name="monthRule"><option value="">Не задано</option>${Object.entries(MONTH_RULE_LABELS).map(([value, label]) => `<option value="${value}" ${item.monthRule === value ? "selected" : ""}>${label}</option>`).join("")}</select></div>
-      <div class="field"><label>Приоритет</label><select name="priority">${Object.entries(PRIORITY_LABELS).map(([value, label]) => `<option value="${value}" ${item.priority === value ? "selected" : ""}>${label}</option>`).join("")}</select></div>
-      <div class="field"><label>Активность</label><select name="isActive"><option value="true" ${item.isActive !== false ? "selected" : ""}>Активно</option><option value="false" ${item.isActive === false ? "selected" : ""}>Не активно</option></select></div>
+
+      <datalist id="adminCategoryOptions">
+        ${categories.map((category) => `<option value="${escapeHtml(category)}"></option>`).join("")}
+      </datalist>
+
+      <div class="field">
+        <label>Название действия</label>
+        <input name="title" value="${escapeHtml(item.title)}" >
+      </div>
+
+      <div class="field">
+        <label>Категория</label>
+        <input name="category" list="adminCategoryOptions" value="${escapeHtml(item.category)}" placeholder="Выберите или введите новую категорию" >
+      </div>
+
+      <div class="field">
+        <label>Стадия</label>
+        <select name="stage">
+          ${Object.entries(STAGE_LABELS).map(([value, label]) => `<option value="${value}" ${item.stage === value ? "selected" : ""}>${label}</option>`).join("")}
+        </select>
+      </div>
+
+      <div class="field wide">
+        <label>Триггер / когда актуально</label>
+        <textarea name="trigger" >${escapeHtml(item.trigger)}</textarea>
+      </div>
+
+      <div class="field wide">
+        <label>Что сделать</label>
+        <textarea name="description" >${escapeHtml(item.description)}</textarea>
+      </div>
+
+      <div class="field wide">
+        <label>Критерий хорошего результата</label>
+        <textarea name="goodResult" >${escapeHtml(item.goodResult)}</textarea>
+      </div>
+
+      <div class="field wide">
+        <label>Что может помочь</label>
+        <textarea name="helperText">${escapeHtml(item.helperText)}</textarea>
+      </div>
+
+      <div class="field">
+        <label>Периодичность</label>
+        <select name="frequencyType">
+          ${Object.entries(FREQUENCY_LABELS).map(([value, label]) => `<option value="${value}" ${item.frequencyType === value ? "selected" : ""}>${label}</option>`).join("")}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>День недели</label>
+        <select name="weekday">
+          <option value="">Не задано</option>
+          ${Object.entries(WEEKDAY_LABELS).map(([value, label]) => `<option value="${value}" ${item.weekday === value ? "selected" : ""}>${label}</option>`).join("")}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Активность</label>
+        <select name="isActive">
+          <option value="true" ${item.isActive !== false ? "selected" : ""}>Активно</option>
+          <option value="false" ${item.isActive === false ? "selected" : ""}>Не активно</option>
+        </select>
+      </div>
+
       <div class="row wide">
         <button class="button" type="submit">Сохранить действие</button>
         <button class="button secondary" id="cancelAdminActionForm" type="button">Отмена</button>
@@ -480,8 +537,11 @@ function getFilteredAdminActions(actions) {
 
 function getActionScheduleText(item) {
   const parts = [FREQUENCY_LABELS[item.frequencyType] || item.frequencyType];
-  if (item.weekday) parts.push(WEEKDAY_LABELS[item.weekday] || item.weekday);
-  if (item.monthRule) parts.push(MONTH_RULE_LABELS[item.monthRule] || item.monthRule);
+
+  if (item.weekday) {
+    parts.push(WEEKDAY_LABELS[item.weekday] || item.weekday);
+  }
+
   return parts.join(" · ");
 }
 
@@ -654,8 +714,8 @@ function renderProjectDetails(project, readonly, progress) {
 
   return `
     <form class="project-edit-grid" id="projectDetailsForm">
-      <div class="field"><label>Название проекта</label><input name="title" value="${escapeHtml(project.title)}" required></div>
-      <div class="field"><label>Клиент</label><input name="client" value="${escapeHtml(project.client)}" required></div>
+      <div class="field"><label>Название проекта</label><input name="title" value="${escapeHtml(project.title)}" ></div>
+      <div class="field"><label>Клиент</label><input name="client" value="${escapeHtml(project.client)}" ></div>
       <div class="field"><label>Тип</label><input name="projectType" value="${escapeHtml(project.projectType || "")}"></div>
       <div class="field">
         <label>Стадия</label>
@@ -849,6 +909,9 @@ render();
     adminActionFormId = button.dataset.editAdminAction;
     render();
   }));
+  document.querySelectorAll("[data-delete-admin-action]").forEach((button) => button.addEventListener("click", () => {
+  deleteAdminAction(button.dataset.deleteAdminAction);
+}));
   document.querySelectorAll("[data-admin-filter]").forEach((select) => select.addEventListener("change", () => {
     adminFilters[select.dataset.adminFilter] = select.value;
     render();
@@ -1070,35 +1133,89 @@ selectedTab = "week";
 
 function saveAdminAction(event) {
   event.preventDefault();
+
   const data = new FormData(event.target);
   const id = data.get("id") || makeId("action");
   const actions = getAllOperationalActions();
   const existing = actions.find((item) => item.id === id);
+
+  const title = data.get("title").trim();
+  const category = data.get("category").trim();
+  const trigger = data.get("trigger").trim();
+  const description = data.get("description").trim();
+  const goodResult = data.get("goodResult").trim();
+  const helperText = data.get("helperText").trim();
+
+  const emptyFields = [];
+
+  if (!title) emptyFields.push("Название действия");
+  if (!category) emptyFields.push("Категория");
+  if (!trigger) emptyFields.push("Триггер / когда актуально");
+  if (!description) emptyFields.push("Что сделать");
+  if (!goodResult) emptyFields.push("Критерий хорошего результата");
+  if (!helperText) emptyFields.push("Что может помочь");
+
+  if (emptyFields.length) {
+    const shouldSave = confirm(
+      `Некоторые поля не заполнены:\n\n${emptyFields.join("\n")}\n\nЛучше заполнить все поля, чтобы действие было понятным для РП.\n\nСохранить действие всё равно?`
+    );
+
+    if (!shouldSave) {
+      return;
+    }
+  }
+
   const nextAction = normalizeAction({
     ...(existing || {}),
     id,
-    title: data.get("title").trim(),
-    category: data.get("category").trim(),
-    stage: data.get("stage"),
-    trigger: data.get("trigger").trim(),
-    description: data.get("description").trim(),
-    goodResult: data.get("goodResult").trim(),
-    helperText: data.get("helperText").trim(),
-    helperLink: data.get("helperLink").trim(),
-    frequencyType: data.get("frequencyType"),
+    title: title || "Без названия",
+    category: category || "Без категории",
+    stage: data.get("stage") || "initiation",
+    trigger,
+    description,
+    goodResult,
+    helperText,
+    frequencyType: data.get("frequencyType") || "once",
     weekday: data.get("weekday") || null,
-    monthRule: data.get("monthRule") || null,
-    priority: data.get("priority"),
+
+    // Эти поля больше не редактируются в админке,
+    // но сохраняем старые значения у существующих действий.
+    helperLink: existing?.helperLink || "",
+    monthRule: existing?.monthRule || null,
+    priority: existing?.priority || "medium",
+
     tags: existing?.tags || [],
     defaultVisible: existing?.defaultVisible !== false,
     isActive: data.get("isActive") !== "false",
   });
+
   const nextActions = existing
     ? actions.map((item) => item.id === id ? nextAction : item)
     : [nextAction, ...actions];
 
   saveActionsDirectory(nextActions);
   adminActionFormId = null;
+  render();
+}
+function deleteAdminAction(actionId) {
+  const actions = getAllOperationalActions();
+  const actionToDelete = actions.find((item) => item.id === actionId);
+
+  if (!actionToDelete) {
+    return;
+  }
+
+  if (!confirm(`Удалить действие «${actionToDelete.title || "Без названия"}» из справочника? Статусы в проектах не будут удалены.`)) {
+    return;
+  }
+
+  const nextActions = actions.filter((item) => item.id !== actionId);
+  saveActionsDirectory(nextActions);
+
+  if (adminActionFormId === actionId) {
+    adminActionFormId = null;
+  }
+
   render();
 }
 

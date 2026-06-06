@@ -1079,3 +1079,55 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+/* ===== Admin actions refinements ===== */
+
+.action-admin-card {
+  display: grid;
+  grid-template-columns: 1fr 150px;
+  gap: 16px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid #d9e2e6;
+  border-radius: 8px;
+  background: #f3f5f6;
+  box-shadow: none;
+}
+
+.action-admin-card h3 {
+  color: #1c252c;
+}
+
+.action-admin-card .muted {
+  color: #66737f;
+}
+
+.admin-card-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-card-actions .button {
+  width: 100%;
+}
+
+.admin-action-form {
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid #d9e2e6;
+  border-radius: 8px;
+  background: #f8fafb;
+}
+
+.admin-action-form .wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 760px) {
+  .action-admin-card {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-card-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+}
