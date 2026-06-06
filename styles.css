@@ -1181,3 +1181,27 @@ textarea {
 .weekly-actions-grid {
   margin-top: 4px;
 }
+.due-date-label {
+  display: inline-flex;
+  width: fit-content;
+  margin: 6px 0 0;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.due-planned {
+  background: #eaf3ff;
+  color: var(--blue);
+}
+
+.due-overdue {
+  background: #ffe9e6;
+  color: var(--danger);
+}
+
+.due-done {
+  background: #e8f6ee;
+  color: var(--ok);
+}

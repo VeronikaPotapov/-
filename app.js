@@ -952,6 +952,8 @@ function renderActionCard(actionItem, project, readonly, compact) {
   const effectiveStatus = status?.status || "not_started";
   const isDone = effectiveStatus === "done";
   const comment = status?.comment || "";
+  const dueDate = status?.dueDate || "";
+const dueMeta = getDueDateMeta(dueDate, effectiveStatus);
   const classes = `action-card ${effectiveStatus}`;
   const helperLink = actionItem.helperLink
     ? `<a href="${escapeHtml(actionItem.helperLink)}" target="_blank" rel="noreferrer">Открыть материал</a>`
@@ -963,6 +965,7 @@ function renderActionCard(actionItem, project, readonly, compact) {
         <div>
           <h3>${escapeHtml(actionItem.title)}</h3>
           <p class="action-summary">${escapeHtml(actionItem.trigger)}</p>
+          ${dueMeta.label ? `<p class="due-date-label ${dueMeta.className}">${escapeHtml(dueMeta.label)}</p>` : ""}
         </div>
 
         <label class="done-toggle">
@@ -1000,8 +1003,23 @@ function renderActionCard(actionItem, project, readonly, compact) {
             ${helperLink}
           </section>
           <section class="instruction-block">
+  <h4>Плановая дата</h4>
+  <input 
+    type="date" 
+    data-action-due-date="${actionItem.id}" 
+    data-action-project-id="${project.id}"
+    value="${escapeHtml(dueDate)}" 
+    ${readonly ? "disabled" : ""}
+  >
+</section>
+          <section class="instruction-block">
             <h4>Комментарий по проекту</h4>
-            <textarea data-action-comment="${actionItem.id}" placeholder="Комментарий" ${readonly ? "disabled" : ""}>${escapeHtml(comment)}</textarea>
+            <textarea 
+  data-action-comment="${actionItem.id}" 
+  data-action-project-id="${project.id}"
+  placeholder="Комментарий" 
+  ${readonly ? "disabled" : ""}
+>${escapeHtml(comment)}</textarea>
           </section>
         </div>
       </details>
@@ -1151,8 +1169,20 @@ document.querySelectorAll("[data-action-toggle-done]").forEach((checkbox) => che
 }));
 
   document.querySelectorAll("[data-action-comment]").forEach((textarea) => textarea.addEventListener("change", () => {
-    updateActionComment(textarea.dataset.actionComment, textarea.value);
-  }));
+  updateActionComment(
+    textarea.dataset.actionComment,
+    textarea.value,
+    textarea.dataset.actionProjectId
+  );
+}));
+
+document.querySelectorAll("[data-action-due-date]").forEach((input) => input.addEventListener("change", () => {
+  updateActionDueDate(
+    input.dataset.actionDueDate,
+    input.value,
+    input.dataset.actionProjectId
+  );
+}));
 
   document.querySelectorAll("[data-action-done]").forEach((button) => button.addEventListener("click", () => {
     updateActionStatus(button.dataset.actionDone, "done");
@@ -1517,23 +1547,56 @@ function updateActionDoneToggle(actionId, checked, projectId = null) {
   updateActionStatus(actionId, checked ? "done" : "not_started", projectId);
 }
 
-function updateActionComment(actionId, comment) {
-  const project = getSelectedProject();
+function updateActionComment(actionId, comment, projectId = null) {
+  const project = projectId
+    ? state.projects.find((item) => item.id === projectId && canEditProject(item))
+    : getSelectedProject();
+
   if (!project || !canEditProject(project)) return;
+
   const item = ensureActionStatus(project, actionId);
   item.comment = comment.trim();
   item.updatedBy = state.userProfile.id;
+
   if (item.comment) {
-    project.comments.push({ id: makeId("comment"), actionId, projectId: project.id, authorName: getUserFullName() || "Пользователь", text: item.comment, createdAt: new Date().toISOString() });
+    project.comments.push({
+      id: makeId("comment"),
+      actionId,
+      projectId: project.id,
+      authorName: getUserFullName() || "Пользователь",
+      text: item.comment,
+      createdAt: new Date().toISOString(),
+    });
   }
+
+  touchProject(project);
+}
+function updateActionDueDate(actionId, dueDate, projectId = null) {
+  const project = projectId
+    ? state.projects.find((item) => item.id === projectId && canEditProject(item))
+    : getSelectedProject();
+
+  if (!project || !canEditProject(project)) return;
+
+  const item = ensureActionStatus(project, actionId);
+  item.dueDate = dueDate;
+  item.updatedBy = state.userProfile.id;
+
   touchProject(project);
 }
 
 function ensureActionStatus(project, actionId) {
   let item = project.actionStatuses.find((status) => status.projectId === project.id && status.actionId === actionId);
   if (!item) {
-    item = { actionId, projectId: project.id, status: "not_started", completedAt: null, comment: "", updatedBy: state.userProfile.id };
-    project.actionStatuses.push(item);
+   item = {
+  actionId,
+  projectId: project.id,
+  status: "not_started",
+  completedAt: null,
+  comment: "",
+  dueDate: "",
+  updatedBy: state.userProfile.id,
+};
   }
   return item;
 }
@@ -1765,6 +1828,38 @@ function matchesStatus(status, filterValue) {
   }
 
   return status === filterValue;
+}
+function getDueDateMeta(dueDate, status) {
+  if (!dueDate) {
+    return { label: "", className: "" };
+  }
+
+  const formattedDate = formatDate(dueDate);
+
+  if (status === "done") {
+    return {
+      label: `Срок: ${formattedDate}`,
+      className: "due-done",
+    };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+
+  if (due < today) {
+    return {
+      label: `Просрочено: ${formattedDate}`,
+      className: "due-overdue",
+    };
+  }
+
+  return {
+    label: `Срок: ${formattedDate}`,
+    className: "due-planned",
+  };
 }
 
 function isFirstState() {
