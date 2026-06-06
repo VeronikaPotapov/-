@@ -892,3 +892,9 @@ textarea {
     margin-top: 10px;
   }
 }
+.project-stage-select {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 4px;
+  font-weight: 800;
+}

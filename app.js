@@ -374,10 +374,18 @@ function renderProjectScreen(project) {
               <span>Тип</span>
               <strong>${escapeHtml(project.projectType || "Не указан")}</strong>
             </div>
-            <div>
-              <span>Стадия</span>
-              <strong>${escapeHtml(STAGE_LABELS[project.stage])}</strong>
-            </div>
+           <div>
+  <span>Стадия</span>
+  ${
+    readonly
+      ? `<strong>${escapeHtml(STAGE_LABELS[project.stage])}</strong>`
+      : `<select class="project-stage-select" id="projectStageQuickSelect">
+          ${Object.entries(STAGE_LABELS).map(([value, label]) => `
+            <option value="${value}" ${project.stage === value ? "selected" : ""}>${label}</option>
+          `).join("")}
+        </select>`
+  }
+</div>
             <div>
               <span>Период</span>
               <strong>${formatDate(project.startDate)} — ${formatDate(project.endDate)}</strong>
@@ -424,15 +432,6 @@ function renderProjectScreen(project) {
           </div>
         </section>
 
-        <section class="panel">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">Доступ</p>
-              <h2>Участники и права</h2>
-            </div>
-          </div>
-          ${renderParticipants(project, readonly)}
-        </section>
       </section>
     </div>
   `;
@@ -697,6 +696,9 @@ document.querySelector("#backToProjectView")?.addEventListener("click", () => {
   projectEditMode = false;
   render();
 });
+document.querySelector("#projectStageQuickSelect")?.addEventListener("change", (event) => {
+  updateProjectStageQuick(event.target.value);
+});
 }
 
 function saveProfile(event) {
@@ -770,6 +772,17 @@ function updateProjectDetails(event) {
   project.startDate = data.get("startDate");
   project.endDate = data.get("endDate");
   projectEditMode = false;
+  touchProject(project);
+}
+function updateProjectStageQuick(stage) {
+  const project = getSelectedProject();
+
+  if (!project || !canEditProject(project) || !STAGE_LABELS[stage]) {
+    return;
+  }
+
+  project.stage = stage;
+  selectedTab = "week";
   touchProject(project);
 }
 
