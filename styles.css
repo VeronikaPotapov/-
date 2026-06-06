@@ -621,3 +621,193 @@ textarea {
   font-size: 13px;
   text-align: center;
 }
+/* ===== Project screen layout: variant 1 + action cards variant 3 ===== */
+
+.project-page-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.project-sidebar {
+  display: grid;
+  gap: 14px;
+  position: sticky;
+  top: 16px;
+}
+
+.project-main-area {
+  min-width: 0;
+}
+
+.project-side-card h2 {
+  font-size: 18px;
+}
+
+.project-side-meta {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.project-side-meta span,
+.side-kpis span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.project-side-meta strong,
+.side-kpis strong {
+  overflow-wrap: anywhere;
+}
+
+.side-tabs {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.side-tabs .tab {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  border-radius: 8px;
+}
+
+.side-progress-value {
+  margin: 10px 0 4px;
+  color: var(--accent-dark);
+  font-size: 32px;
+  font-weight: 900;
+}
+
+.side-kpis {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.side-kpis div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+/* Убираем старое ощущение длинной раскрытой инструкции */
+.action-card {
+  padding: 18px;
+}
+
+.action-card .details {
+  margin-top: 14px;
+}
+
+.action-card .details summary {
+  margin-bottom: 12px;
+}
+
+/* Карточка действия как в варианте 3: строки-блоки */
+.details-body {
+  gap: 10px;
+}
+
+.instruction-block {
+  position: relative;
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 14px 16px 14px 50px;
+}
+
+.instruction-block::before {
+  position: absolute;
+  left: 16px;
+  top: 15px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: #eaf7f6;
+  color: var(--accent-dark);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.instruction-block:nth-of-type(1)::before {
+  content: "◷";
+}
+
+.instruction-block:nth-of-type(2)::before {
+  content: "✓";
+}
+
+.instruction-block:nth-of-type(3)::before {
+  content: "★";
+}
+
+.instruction-block:nth-of-type(4)::before {
+  content: "?";
+}
+
+.instruction-block:nth-of-type(5)::before {
+  content: "✎";
+}
+
+.instruction-block:nth-of-type(6)::before {
+  content: "●";
+}
+
+.instruction-block h4 {
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.instruction-block p,
+.instruction-block textarea,
+.instruction-block .status-controls {
+  grid-column: 2;
+}
+
+.result-block {
+  background: #f0faf8;
+}
+
+@media (max-width: 980px) {
+  .project-page-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .project-sidebar {
+    position: static;
+  }
+
+  .side-tabs {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .side-tabs .tab {
+    width: auto;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .instruction-block {
+    grid-template-columns: 1fr;
+    padding-left: 46px;
+  }
+
+  .instruction-block p,
+  .instruction-block textarea,
+  .instruction-block .status-controls {
+    grid-column: 1;
+  }
+}
