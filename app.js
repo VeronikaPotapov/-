@@ -147,14 +147,14 @@ function render() {
   }
 
   app.innerHTML = `
+    ${renderTopTools()}
     <div class="layout">
       <aside class="sidebar">
         ${renderProfile()}
-        ${renderDataTools()}
+        ${renderCreateProject()}
       </aside>
       <section class="workspace">
         ${isFirstState() ? renderWelcome() : renderProjectsList()}
-        ${renderCreateProject()}
       </section>
     </div>
   `;
@@ -217,20 +217,13 @@ function renderProfile() {
 }
 
 function renderCreateProject() {
-  if (!isProfileComplete(state.userProfile)) {
-    return `
-      <section class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">Новый проект</p>
-            <h2>Создание проекта</h2>
-          </div>
-        </div>
-        <p class="muted">Сначала заполните профиль, чтобы создавать проекты.</p>
-        <button class="button" type="button" disabled>Создать проект</button>
-      </section>
-    `;
-  }
+if (!projectFormVisible) {
+  return `
+    <section class="panel create-project-panel">
+      <button class="button" id="showProjectForm" type="button">Создать проект</button>
+    </section>
+  `;
+}
 
   if (!projectFormVisible) {
     return `
@@ -314,16 +307,10 @@ function renderProjectsList() {
   `;
 }
 
-function renderDataTools() {
+function renderTopTools() {
   return `
-    <section class="panel">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">Данные</p>
-          <h2>Настройки MVP</h2>
-        </div>
-      </div>
-      <button class="button danger" id="clearDataButton" type="button">Очистить данные</button>
+    <section class="top-tools">
+      <button class="button danger small" id="clearDataButton" type="button">Очистить данные</button>
     </section>
   `;
 }

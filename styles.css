@@ -598,3 +598,26 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+.top-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 14px;
+}
+
+.top-tools .button {
+  box-shadow: none;
+}
+.create-project-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.create-project-panel .button {
+  width: 100%;
+}
+
+.create-project-hint {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+}
