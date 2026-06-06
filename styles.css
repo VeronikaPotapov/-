@@ -819,3 +819,76 @@ textarea {
 .project-side-card .project-edit-button {
   justify-content: center;
 }
+.done-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.done-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.done-toggle-control {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: #dfe8ec;
+  border: 1px solid var(--line);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.done-toggle-control::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(28, 37, 44, 0.18);
+  transition: transform 0.2s ease;
+}
+
+.done-toggle input:checked + .done-toggle-control {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.done-toggle input:checked + .done-toggle-control::before {
+  transform: translateX(20px);
+}
+
+.done-toggle-text {
+  min-width: 94px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.done-toggle input:checked ~ .done-toggle-text {
+  color: var(--accent-dark);
+}
+
+.done-toggle input:disabled + .done-toggle-control,
+.done-toggle input:disabled ~ .done-toggle-text {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .card-top {
+    display: grid;
+  }
+
+  .done-toggle {
+    margin-top: 10px;
+  }
+}

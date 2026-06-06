@@ -534,6 +534,7 @@ function renderParticipants(project, readonly) {
 function renderActionCard(actionItem, project, readonly, compact) {
   const status = getActionStatus(project, actionItem.id);
   const effectiveStatus = status?.status || "not_started";
+  const isDone = effectiveStatus === "done";
   const comment = status?.comment || "";
   const classes = `action-card ${effectiveStatus}`;
   const helperLink = actionItem.helperLink
@@ -545,16 +546,22 @@ function renderActionCard(actionItem, project, readonly, compact) {
       <div class="card-top">
         <div>
           <h3>${escapeHtml(actionItem.title)}</h3>
-          <div class="badges">
-            <span class="badge">${escapeHtml(actionItem.category)}</span>
-            <span class="badge frequency">${escapeHtml(FREQUENCY_LABELS[actionItem.frequencyType])}</span>
-            <span class="badge ${actionItem.priority}">Приоритет: ${PRIORITY_LABELS[actionItem.priority]}</span>
-            <span class="badge ${effectiveStatus === "done" ? "done" : effectiveStatus === "in_progress" ? "progress" : ""}">${STATUS_LABELS[effectiveStatus]}</span>
-          </div>
+          <p class="action-summary">${escapeHtml(actionItem.trigger)}</p>
         </div>
+
+        <label class="done-toggle">
+          <input 
+            type="checkbox" 
+            data-action-toggle-done="${actionItem.id}" 
+            ${isDone ? "checked" : ""} 
+            ${readonly ? "disabled" : ""}
+          >
+          <span class="done-toggle-control"></span>
+          <span class="done-toggle-text">${isDone ? "Выполнено" : "Не выполнено"}</span>
+        </label>
       </div>
-      <p class="action-summary">${escapeHtml(actionItem.trigger)}</p>
-      <details class="details" ${compact ? "" : "open"}>
+
+      <details class="details">
         <summary>Подробнее</summary>
         <div class="details-body">
           <section class="instruction-block">
@@ -578,15 +585,6 @@ function renderActionCard(actionItem, project, readonly, compact) {
           <section class="instruction-block">
             <h4>Комментарий по проекту</h4>
             <textarea data-action-comment="${actionItem.id}" placeholder="Комментарий" ${readonly ? "disabled" : ""}>${escapeHtml(comment)}</textarea>
-          </section>
-          <section class="instruction-block">
-            <h4>Статус</h4>
-            <div class="status-controls">
-              <select data-action-status="${actionItem.id}" ${readonly ? "disabled" : ""}>
-                ${Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${effectiveStatus === value ? "selected" : ""}>${label}</option>`).join("")}
-              </select>
-              <button class="button small" data-action-done="${actionItem.id}" ${readonly || effectiveStatus === "done" ? "disabled" : ""}>Выполнено</button>
-            </div>
           </section>
         </div>
       </details>
@@ -666,6 +664,9 @@ render();
   document.querySelectorAll("[data-action-status]").forEach((select) => select.addEventListener("change", () => {
     updateActionStatus(select.dataset.actionStatus, select.value);
   }));
+  document.querySelectorAll("[data-action-toggle-done]").forEach((checkbox) => checkbox.addEventListener("change", () => {
+  updateActionDoneToggle(checkbox.dataset.actionToggleDone, checkbox.checked);
+}));
 
   document.querySelectorAll("[data-action-comment]").forEach((textarea) => textarea.addEventListener("change", () => {
     updateActionComment(textarea.dataset.actionComment, textarea.value);
@@ -892,6 +893,9 @@ function updateActionStatus(actionId, status) {
   item.completedAt = status === "done" ? new Date().toISOString() : null;
   item.updatedBy = state.userProfile.id;
   touchProject(project);
+}
+function updateActionDoneToggle(actionId, checked) {
+  updateActionStatus(actionId, checked ? "done" : "not_started");
 }
 
 function updateActionComment(actionId, comment) {
