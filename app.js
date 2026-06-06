@@ -121,6 +121,61 @@ function resetActionsDirectory() {
   adminActionFormId = null;
   render();
 }
+function exportActionsDirectory() {
+  const actions = getAllOperationalActions();
+  const json = JSON.stringify(actions, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "rp-actions.json";
+  document.body.appendChild(link);
+  link.click();
+
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function importActionsDirectory(event) {
+  const file = event.target.files?.[0];
+
+  if (!file) {
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+
+      if (!Array.isArray(parsed)) {
+        throw new Error("Imported data is not an array");
+      }
+
+      const normalizedActions = parsed.map(normalizeAction);
+      saveActionsDirectory(normalizedActions);
+
+      adminActionFormId = null;
+      adminFilters = { stage: "all", category: "all", active: "all" };
+
+      alert("Справочник действий импортирован.");
+      render();
+    } catch {
+      alert("Не удалось импортировать справочник. Проверьте формат файла.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  reader.onerror = () => {
+    alert("Не удалось прочитать файл.");
+    event.target.value = "";
+  };
+
+  reader.readAsText(file);
+}
 
 function normalizeAction(item) {
   return {
@@ -387,8 +442,11 @@ function renderActionsAdminScreen() {
         </div>
         <div class="row">
           <button class="button secondary" id="backFromActionsAdmin" type="button">Назад в кабинет РП</button>
-          <button class="button" id="addAdminAction" type="button">Добавить действие</button>
-          <button class="button danger" id="resetActionsDirectory" type="button">Сбросить справочник к стандартному</button>
+<button class="button" id="addAdminAction" type="button">Добавить действие</button>
+<button class="button secondary" id="exportActionsDirectory" type="button">Экспортировать справочник</button>
+<button class="button secondary" id="importActionsDirectory" type="button">Импортировать справочник</button>
+<input class="hidden" id="importActionsFile" type="file" accept="application/json,.json">
+<button class="button danger" id="resetActionsDirectory" type="button">Сбросить справочник к стандартному</button>
         </div>
       </div>
       ${adminActionFormId ? renderActionAdminForm(adminActionFormId, actions) : ""}
@@ -904,6 +962,14 @@ render();
       resetActionsDirectory();
     }
   });
+  document.querySelector("#exportActionsDirectory")?.addEventListener("click", exportActionsDirectory);
+
+document.querySelector("#importActionsDirectory")?.addEventListener("click", () => {
+  document.querySelector("#importActionsFile")?.click();
+});
+
+document.querySelector("#importActionsFile")?.addEventListener("change", importActionsDirectory);
+
   document.querySelector("#adminActionForm")?.addEventListener("submit", saveAdminAction);
   document.querySelectorAll("[data-edit-admin-action]").forEach((button) => button.addEventListener("click", () => {
     adminActionFormId = button.dataset.editAdminAction;
