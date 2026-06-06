@@ -811,3 +811,11 @@ textarea {
     grid-column: 1;
   }
 }
+.project-edit-button {
+  width: 100%;
+  margin-top: 18px;
+}
+
+.project-side-card .project-edit-button {
+  justify-content: center;
+}

@@ -75,11 +75,12 @@ const operationalActions = [
 const app = document.querySelector("#app");
 let state = loadState();
 let selectedProjectId = null;
-let selectedTab = "now";
+let selectedTab = "week";
 let filters = { stage: "all", category: "all", frequencyType: "all", status: "all", priority: "all" };
 let profileError = "";
 let profileEditing = !isProfileComplete(state.userProfile);
 let projectFormVisible = false;
+let projectEditMode = false;
 
 render();
 
@@ -135,11 +136,13 @@ function saveState() {
 
 function render() {
   const selectedProject = getSelectedProject();
-  if (selectedProject) {
-    app.innerHTML = `<section class="workspace project-workspace">${renderProjectScreen(selectedProject)}</section>`;
-    bindEvents();
-    return;
-  }
+if (selectedProject) {
+  app.innerHTML = `<section class="workspace project-workspace">${
+    projectEditMode ? renderProjectEditScreen(selectedProject) : renderProjectScreen(selectedProject)
+  }</section>`;
+  bindEvents();
+  return;
+}
   if (selectedProjectId) {
     app.innerHTML = `<section class="workspace project-workspace">${renderNoAccess()}</section>`;
     bindEvents();
@@ -381,18 +384,18 @@ function renderProjectScreen(project) {
               <strong>${formatDate(project.startDate)} — ${formatDate(project.endDate)}</strong>
             </div>
           </div>
+          ${readonly ? "" : '<button class="button secondary project-edit-button" id="editProjectCardButton" type="button">Редактировать карточку</button>'}
         </section>
 
         <section class="panel project-side-card">
           <p class="eyebrow">Разделы</p>
           <h2>Операционные действия</h2>
-          <div class="side-tabs">
-            ${tabButton("now", "Сейчас")}
-            ${tabButton("week", "На этой неделе")}
-            ${tabButton("month", "В этом месяце")}
-            ${tabButton("stage", "На стадии проекта")}
-            ${tabButton("all", "Все действия")}
-          </div>
+  <div class="side-tabs">
+  ${tabButton("week", "На этой неделе")}
+  ${tabButton("month", "В этом месяце")}
+  ${tabButton("stage", "На стадии проекта")}
+  ${tabButton("all", "Все действия")}
+</div>
         </section>
 
         <section class="panel project-side-card">
@@ -406,17 +409,7 @@ function renderProjectScreen(project) {
           </div>
         </section>
       </aside>
-
-      <section class="workspace project-main-area">
-        <section class="panel">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">Карточка проекта</p>
-              <h2>${escapeHtml(project.title)}</h2>
-            </div>
-          </div>
-          ${renderProjectDetails(project, readonly, progress)}
-        </section>
+       
 
         <section class="panel">
           <div class="panel-heading">
@@ -446,7 +439,6 @@ function renderProjectScreen(project) {
 }
 function getCurrentTabTitle() {
   const titles = {
-    now: "Сейчас",
     week: "На этой неделе",
     month: "В этом месяце",
     stage: "На стадии проекта",
@@ -454,6 +446,25 @@ function getCurrentTabTitle() {
   };
 
   return titles[selectedTab] || "Операционные действия";
+}
+function renderProjectEditScreen(project) {
+  const progress = getProjectProgress(project);
+
+  return `
+    <section class="panel compact-panel">
+      <button class="button secondary" id="backToProjectView" type="button">← Назад к проекту</button>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Редактирование</p>
+          <h2>Карточка проекта</h2>
+        </div>
+      </div>
+      ${renderProjectDetails(project, false, progress)}
+    </section>
+  `;
 }
 
 function renderProjectDetails(project, readonly, progress) {
@@ -631,18 +642,20 @@ function bindEvents() {
     render();
   });
   document.querySelector("#backToProjects")?.addEventListener("click", () => {
-    selectedProjectId = null;
-    selectedTab = "now";
-    render();
+ selectedProjectId = null;
+selectedTab = "week";
+projectEditMode = false;
+render();
   });
   document.querySelector("#startCreateProject")?.addEventListener("click", focusFirstSetupField);
   document.querySelector("#openDemoProject")?.addEventListener("click", createDemoProject);
   document.querySelector("#clearDataButton")?.addEventListener("click", clearAppData);
   document.querySelectorAll("[data-select-project]").forEach((button) => button.addEventListener("click", () => {
-    selectedProjectId = button.dataset.selectProject;
-    selectedTab = "now";
-    projectFormVisible = false;
-    render();
+selectedProjectId = button.dataset.selectProject;
+selectedTab = "week";
+projectFormVisible = false;
+projectEditMode = false;
+render();
   }));
 
   document.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click", () => {
@@ -674,6 +687,15 @@ function bindEvents() {
     filters[select.dataset.filter] = select.value;
     render();
   }));
+  document.querySelector("#editProjectCardButton")?.addEventListener("click", () => {
+  projectEditMode = true;
+  render();
+});
+
+document.querySelector("#backToProjectView")?.addEventListener("click", () => {
+  projectEditMode = false;
+  render();
+});
 }
 
 function saveProfile(event) {
@@ -746,6 +768,7 @@ function updateProjectDetails(event) {
   project.stage = data.get("stage");
   project.startDate = data.get("startDate");
   project.endDate = data.get("endDate");
+  projectEditMode = false;
   touchProject(project);
 }
 
@@ -792,7 +815,7 @@ function createDemoProject() {
     ],
   };
   selectedProjectId = projectId;
-  selectedTab = "now";
+selectedTab = "week";
   profileEditing = false;
   projectFormVisible = false;
   filters = { stage: "all", category: "all", frequencyType: "all", status: "all", priority: "all" };
@@ -818,7 +841,7 @@ function clearAppData() {
   localStorage.removeItem(STORAGE_KEY);
   state = loadState();
   selectedProjectId = null;
-  selectedTab = "now";
+selectedTab = "week";
   profileEditing = true;
   projectFormVisible = false;
   filters = { stage: "all", category: "all", frequencyType: "all", status: "all", priority: "all" };
@@ -893,7 +916,6 @@ function ensureActionStatus(project, actionId) {
 }
 
 function getActionsForTab(project, tab) {
-  if (tab === "now") return getNowActions(operationalActions, project, new Date());
   if (tab === "week") return getWeekActions(operationalActions, project, new Date());
   if (tab === "month") return getMonthActions(operationalActions, project, new Date());
   if (tab === "stage") return getStageActions(operationalActions, project);
@@ -918,12 +940,50 @@ function getWeekActions(actions, project) {
   )));
 }
 
-function getMonthActions(actions, project) {
-  return sortActions(actions.filter((item) => item.stage === project.stage && isOpen(project, item.id) && (
-    item.frequencyType === "monthly" ||
-    ["first_workday", "beginning_of_month", "end_of_month"].includes(item.monthRule) ||
-    ["Мониторинг", "Подрядчики", "План-факт", "ОРП"].includes(item.category)
-  )));
+function getMonthActions(actions, project, today) {
+  return sortActions(actions.filter((item) => {
+    if (item.stage !== project.stage || !isOpen(project, item.id)) {
+      return false;
+    }
+
+
+    const isMonthlyAction =
+      item.frequencyType === "monthly" ||
+      ["first_workday", "beginning_of_month", "end_of_month"].includes(item.monthRule) ||
+      ["Мониторинг", "Подрядчики", "План-факт", "ОРП"].includes(item.category);
+
+    const isWeeklyActionInCurrentMonth =
+      isCurrentWeekInCurrentMonth(today) &&
+      (
+        item.frequencyType === "weekly" ||
+        item.frequencyType === "biweekly" ||
+        (
+          item.stage === project.stage &&
+          item.priority === "high" &&
+          ["once", "event"].includes(item.frequencyType)
+        )
+      );
+
+    return isMonthlyAction || isWeeklyActionInCurrentMonth;
+  }));
+}
+function isCurrentWeekInCurrentMonth(today) {
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+
+  const monday = new Date(today);
+  const day = today.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  monday.setDate(today.getDate() + diffToMonday);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  return (
+    (monday.getMonth() === currentMonth && monday.getFullYear() === currentYear) ||
+    (sunday.getMonth() === currentMonth && sunday.getFullYear() === currentYear) ||
+    (monday <= today && today <= sunday)
+  );
 }
 
 function getStageActions(actions, project) {
