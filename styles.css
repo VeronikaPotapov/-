@@ -1140,3 +1140,31 @@ textarea {
 .project-card-actions .button {
   width: 100%;
 }
+.project-template-preview {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #cfe2df;
+  border-radius: 8px;
+  background: #f3faf9;
+}
+
+.project-template-preview strong {
+  color: var(--accent-dark);
+  font-size: 14px;
+}
+
+.project-template-preview span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.template-preview-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.empty-preview {
+  border-color: #d9e2e6;
+  background: #f6f8f9;
+}

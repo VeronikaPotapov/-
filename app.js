@@ -376,12 +376,16 @@ function renderCreateProject() {
 <form class="form-grid" id="projectForm">
   <div class="field"><label>Название проекта</label><input id="projectTitle" name="title"></div>
   <div class="field"><label>Клиент</label><input name="client"></div>
-  <div class="field">
-    <label>Тип проекта</label>
-    <select name="projectType">
-      ${PROJECT_TYPE_OPTIONS.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join("")}
-    </select>
-  </div>
+<div class="field">
+  <label>Тип проекта</label>
+  <select name="projectType" id="newProjectType">
+    ${PROJECT_TYPE_OPTIONS.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join("")}
+  </select>
+</div>
+
+<div id="projectActionsPreview">
+  ${renderProjectTypeActionPreview(PROJECT_TYPE_OPTIONS[0])}
+</div>
   <div class="field">
     <label>Стадия</label>
     <select name="stage">
@@ -1072,6 +1076,13 @@ document.querySelector("#backToProjectView")?.addEventListener("click", () => {
 document.querySelector("#projectStageQuickSelect")?.addEventListener("change", (event) => {
   updateProjectStageQuick(event.target.value);
 });
+document.querySelector("#newProjectType")?.addEventListener("change", (event) => {
+  const preview = document.querySelector("#projectActionsPreview");
+
+  if (preview) {
+    preview.innerHTML = renderProjectTypeActionPreview(event.target.value);
+  }
+});
 }
 
 function saveProfile(event) {
@@ -1515,6 +1526,42 @@ function getOpenActions(project) {
     matchesProjectType(item, project) &&
     isOpen(project, item.id)
   );
+}
+function getProjectTypeActionSummary(projectType) {
+  const actions = getActiveOperationalActions().filter((item) => item.projectType === projectType);
+
+  return {
+    total: actions.length,
+    stages: {
+      initiation: actions.filter((item) => item.stage === "initiation").length,
+      execution: actions.filter((item) => item.stage === "execution").length,
+      closing: actions.filter((item) => item.stage === "closing").length,
+    },
+  };
+}
+
+function renderProjectTypeActionPreview(projectType) {
+  const summary = getProjectTypeActionSummary(projectType);
+
+  if (!summary.total) {
+    return `
+      <div class="project-template-preview empty-preview">
+        <strong>Для проекта типа «${escapeHtml(projectType)}» пока нет настроенных действий.</strong>
+        <span>Добавьте действия в админке справочника.</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="project-template-preview">
+      <strong>Для проекта типа «${escapeHtml(projectType)}» будет доступно действий: ${summary.total}</strong>
+      <div class="template-preview-grid">
+        <span>Инициация: <b>${summary.stages.initiation}</b></span>
+        <span>Реализация: <b>${summary.stages.execution}</b></span>
+        <span>Закрытие: <b>${summary.stages.closing}</b></span>
+      </div>
+    </div>
+  `;
 }
 
 function getProjectProgress(project) {
