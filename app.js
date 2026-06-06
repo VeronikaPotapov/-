@@ -937,7 +937,7 @@ function getNowActions(actions, project, today) {
 }
 
 function getWeekActions(actions, project) {
-  return sortActions(actions.filter((item) => item.stage === project.stage && isOpen(project, item.id) && (
+  return sortActions(actions.filter((item) => item.stage === project.stage && isVisibleInWorkSections(project, item.id) && (
     item.frequencyType === "weekly" ||
     item.frequencyType === "biweekly" ||
     (item.stage === project.stage && item.priority === "high" && ["once", "event"].includes(item.frequencyType))
@@ -946,9 +946,9 @@ function getWeekActions(actions, project) {
 
 function getMonthActions(actions, project, today) {
   return sortActions(actions.filter((item) => {
-    if (item.stage !== project.stage || !isOpen(project, item.id)) {
-      return false;
-    }
+  if (item.stage !== project.stage || !isVisibleInWorkSections(project, item.id)) {
+  return false;
+}
 
 
     const isMonthlyAction =
@@ -991,7 +991,7 @@ function isCurrentWeekInCurrentMonth(today) {
 }
 
 function getStageActions(actions, project) {
-  return sortActions(actions.filter((item) => isOpen(project, item.id) && item.stage === project.stage && ["once", "event"].includes(item.frequencyType)));
+  return sortActions(actions.filter((item) => isVisibleInWorkSections(project, item.id) && item.stage === project.stage && ["once", "event"].includes(item.frequencyType)));
 }
 
 function getAllProcesses(actions, project, activeFilters) {
@@ -1035,6 +1035,9 @@ function getEffectiveStatus(project, actionId) {
 
 function isOpen(project, actionId) {
   return ["not_started", "in_progress"].includes(getEffectiveStatus(project, actionId));
+}
+function isVisibleInWorkSections(project, actionId) {
+  return getEffectiveStatus(project, actionId) !== "skipped";
 }
 
 function sortActions(actions) {
