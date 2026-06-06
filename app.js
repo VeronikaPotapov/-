@@ -49,6 +49,12 @@ const ROLE_OPTIONS = [
   "Куратор",
   "Иная роль",
 ];
+const PROJECT_TYPE_OPTIONS = [
+  "Внедрение",
+  "Поддержка",
+  "Внутренний проект",
+  "Иной тип",
+];
 
 const defaultOperationalActions = [
   action("init-accept-from-sales", "Приём проекта от продаж", "Старт проекта", "initiation", "Проект передан от продаж в реализацию", "Принять проект от продаж: получить исходные договорённости, границы проекта, ожидания заказчика, ограничения, вводные по команде и рискам.", "РП понимает контекст проекта, договорённости с заказчиком, состав работ, ограничения и ближайшие шаги.", "once", "high", "Проверь, что переданы все ключевые вводные по проекту, клиенту, договорённостям и ожиданиям.", ["инициация", "продажи"]),
@@ -79,7 +85,7 @@ let state = loadState();
 let selectedProjectId = null;
 let selectedTab = "week";
 let filters = { stage: "all", category: "all", frequencyType: "all", status: "all", priority: "all" };
-let adminFilters = { stage: "all", category: "all", active: "all" };
+let adminFilters = { stage: "all", projectType: "all", category: "all", active: "all" };
 let profileError = "";
 let profileEditing = !isProfileComplete(state.userProfile);
 let projectFormVisible = false;
@@ -118,7 +124,7 @@ function saveActionsDirectory(actions) {
 
 function resetActionsDirectory() {
   localStorage.removeItem(ACTIONS_STORAGE_KEY);
-  adminFilters = { stage: "all", category: "all", active: "all" };
+ adminFilters = { stage: "all", projectType: "all", category: "all", active: "all" };
   adminActionFormId = null;
   render();
 }
@@ -159,7 +165,7 @@ function importActionsDirectory(event) {
       saveActionsDirectory(normalizedActions);
 
       adminActionFormId = null;
-      adminFilters = { stage: "all", category: "all", active: "all" };
+      adminFilters = { stage: "all", projectType: "all", category: "all", active: "all" };
 
       alert("Справочник действий импортирован.");
       render();
@@ -184,6 +190,7 @@ function normalizeAction(item) {
     title: item.title || "",
     category: item.category || "",
     stage: item.stage || "initiation",
+    projectType: item.projectType || "Внедрение",
     trigger: item.trigger || "",
     description: item.description || "",
     goodResult: item.goodResult || "",
@@ -366,25 +373,30 @@ function renderCreateProject() {
           <h2>Создать проект</h2>
         </div>
       </div>
-      <form class="form-grid" id="projectForm">
-        <div class="field"><label>Название проекта</label><input id="projectTitle" name="title" ></div>
-        <div class="field"><label>Клиент</label><input name="client" ></div>
-        <div class="field"><label>Тип проекта</label><input name="projectType" placeholder="Внедрение, поддержка, внутренний продукт"></div>
-        <div class="field">
-          <label>Стадия</label>
-          <select name="stage">
-            <option value="initiation">Инициация</option>
-            <option value="execution">Реализация</option>
-            <option value="closing">Закрытие</option>
-          </select>
-        </div>
-        <div class="field"><label>Дата начала</label><input name="startDate" type="date"></div>
-        <div class="field"><label>Дата окончания</label><input name="endDate" type="date"></div>
-        <div class="row">
-          <button class="button" type="submit">Создать проект</button>
-          <button class="button secondary" id="cancelProjectCreate" type="button">Отмена</button>
-        </div>
-      </form>
+<form class="form-grid" id="projectForm">
+  <div class="field"><label>Название проекта</label><input id="projectTitle" name="title"></div>
+  <div class="field"><label>Клиент</label><input name="client"></div>
+  <div class="field">
+    <label>Тип проекта</label>
+    <select name="projectType">
+      ${PROJECT_TYPE_OPTIONS.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join("")}
+    </select>
+  </div>
+  <div class="field">
+    <label>Стадия</label>
+    <select name="stage">
+      <option value="initiation">Инициация</option>
+      <option value="execution">Реализация</option>
+      <option value="closing">Закрытие</option>
+    </select>
+  </div>
+  <div class="field"><label>Дата начала</label><input name="startDate" type="date"></div>
+  <div class="field"><label>Дата окончания</label><input name="endDate" type="date"></div>
+  <div class="row">
+    <button class="button" type="submit">Создать проект</button>
+    <button class="button secondary" id="cancelProjectCreate" type="button">Отмена</button>
+  </div>
+</form>
     </section>
   `;
 }
@@ -468,6 +480,7 @@ function renderActionsAdminFilters(actions) {
   return `
     <div class="filters admin-filters">
       ${adminSelectFilter("stage", "Стадия", [["all", "Все"], ...Object.entries(STAGE_LABELS)])}
+      ${adminSelectFilter("projectType", "Тип проекта", [["all", "Все"], ...PROJECT_TYPE_OPTIONS.map((type) => [type, type])])}
       ${adminSelectFilter("category", "Категория", [["all", "Все"], ...categories.map((item) => [item, item])])}
       ${adminSelectFilter("active", "Активность", [["all", "Все"], ["active", "Активные"], ["inactive", "Отключённые"]])}
     </div>
@@ -492,8 +505,9 @@ function renderActionAdminCard(item) {
         <h3>${escapeHtml(item.title || "Без названия")}</h3>
         <div class="badges">
           <span class="badge">${escapeHtml(STAGE_LABELS[item.stage] || item.stage)}</span>
-          <span class="badge">${escapeHtml(item.category || "Без категории")}</span>
-          <span class="badge frequency">${escapeHtml(FREQUENCY_LABELS[item.frequencyType] || item.frequencyType)}</span>
+<span class="badge">${escapeHtml(item.projectType || "Внедрение")}</span>
+<span class="badge">${escapeHtml(item.category || "Без категории")}</span>
+<span class="badge frequency">${escapeHtml(FREQUENCY_LABELS[item.frequencyType] || item.frequencyType)}</span>
           <span class="badge ${item.isActive === false ? "high" : "done"}">${item.isActive === false ? "Отключено" : "Активно"}</span>
         </div>
         <p class="muted">${escapeHtml(getActionScheduleText(item))}</p>
@@ -537,6 +551,13 @@ function renderActionAdminForm(actionId, actions) {
           ${Object.entries(STAGE_LABELS).map(([value, label]) => `<option value="${value}" ${item.stage === value ? "selected" : ""}>${label}</option>`).join("")}
         </select>
       </div>
+
+      <div class="field">
+  <label>Тип проекта</label>
+  <select name="projectType">
+    ${PROJECT_TYPE_OPTIONS.map((type) => `<option value="${escapeHtml(type)}" ${item.projectType === type ? "selected" : ""}>${escapeHtml(type)}</option>`).join("")}
+  </select>
+</div>
 
       <div class="field wide">
         <label>Триггер / когда актуально</label>
@@ -593,6 +614,7 @@ function getFilteredAdminActions(actions) {
   return actions.filter((item) => {
     const activeValue = item.isActive === false ? "inactive" : "active";
     return matches(item.stage, adminFilters.stage) &&
+      matches(item.projectType, adminFilters.projectType) &&
       matches(item.category, adminFilters.category) &&
       matches(activeValue, adminFilters.active);
   });
@@ -779,7 +801,12 @@ function renderProjectDetails(project, readonly, progress) {
     <form class="project-edit-grid" id="projectDetailsForm">
       <div class="field"><label>Название проекта</label><input name="title" value="${escapeHtml(project.title)}" ></div>
       <div class="field"><label>Клиент</label><input name="client" value="${escapeHtml(project.client)}" ></div>
-      <div class="field"><label>Тип</label><input name="projectType" value="${escapeHtml(project.projectType || "")}"></div>
+      <div class="field">
+  <label>Тип</label>
+  <select name="projectType">
+    ${PROJECT_TYPE_OPTIONS.map((type) => `<option value="${escapeHtml(type)}" ${project.projectType === type ? "selected" : ""}>${escapeHtml(type)}</option>`).join("")}
+  </select>
+</div>
       <div class="field">
         <label>Стадия</label>
         <select name="stage">
@@ -1078,21 +1105,21 @@ function createProject(event) {
   const data = new FormData(event.target);
   const now = new Date().toISOString();
   const ownerName = getUserFullName();
-  const project = {
-    id: makeId("project"),
-    title: data.get("title").trim(),
-    client: data.get("client").trim(),
-    projectType: data.get("projectType").trim(),
-    stage: data.get("stage"),
-    startDate: data.get("startDate"),
-    endDate: data.get("endDate"),
-    ownerId: state.userProfile.id,
-    participants: [{ id: makeId("participant"), name: ownerName, email: "", accessLevel: "editor" }],
-    actionStatuses: [],
-    comments: [],
-    createdAt: now,
-    updatedAt: now,
-  };
+const project = {
+  id: makeId("project"),
+  title: data.get("title").trim(),
+  client: data.get("client").trim(),
+  projectType: data.get("projectType") || "Внедрение",
+  stage: data.get("stage"),
+  startDate: data.get("startDate"),
+  endDate: data.get("endDate"),
+  ownerId: state.userProfile.id,
+  participants: [{ id: makeId("participant"), name: ownerName, email: "", accessLevel: "editor" }],
+  actionStatuses: [],
+  comments: [],
+  createdAt: now,
+  updatedAt: now,
+};
   state.projects.unshift(project);
   selectedProjectId = project.id;
   projectFormVisible = false;
@@ -1236,29 +1263,30 @@ function saveAdminAction(event) {
     }
   }
 
-  const nextAction = normalizeAction({
-    ...(existing || {}),
-    id,
-    title: title || "Без названия",
-    category: category || "Без категории",
-    stage: data.get("stage") || "initiation",
-    trigger,
-    description,
-    goodResult,
-    helperText,
-    frequencyType: data.get("frequencyType") || "once",
-    weekday: data.get("weekday") || null,
+const nextAction = normalizeAction({
+  ...(existing || {}),
+  id,
+  title: title || "Без названия",
+  category: category || "Без категории",
+  stage: data.get("stage") || "initiation",
+  projectType: data.get("projectType") || "Внедрение",
+  trigger,
+  description,
+  goodResult,
+  helperText,
+  frequencyType: data.get("frequencyType") || "once",
+  weekday: data.get("weekday") || null,
 
-    // Эти поля больше не редактируются в админке,
-    // но сохраняем старые значения у существующих действий.
-    helperLink: existing?.helperLink || "",
-    monthRule: existing?.monthRule || null,
-    priority: existing?.priority || "medium",
+  // Эти поля больше не редактируются в админке,
+  // но сохраняем старые значения у существующих действий.
+  helperLink: existing?.helperLink || "",
+  monthRule: existing?.monthRule || null,
+  priority: existing?.priority || "medium",
 
-    tags: existing?.tags || [],
-    defaultVisible: existing?.defaultVisible !== false,
-    isActive: data.get("isActive") !== "false",
-  });
+  tags: existing?.tags || [],
+  defaultVisible: existing?.defaultVisible !== false,
+  isActive: data.get("isActive") !== "false",
+});
 
   const nextActions = existing
     ? actions.map((item) => item.id === id ? nextAction : item)
@@ -1379,7 +1407,7 @@ function getNowActions(actions, project, today) {
 }
 
 function getWeekActions(actions, project) {
-  return sortActions(actions.filter((item) => item.stage === project.stage && isVisibleInWorkSections(project, item.id) && (
+  return sortActions(actions.filter((item) => item.stage === project.stage && matchesProjectType(item, project) && isVisibleInWorkSections(project, item.id) && (
     item.frequencyType === "weekly" ||
     item.frequencyType === "biweekly" ||
     (item.stage === project.stage && item.priority === "high" && ["once", "event"].includes(item.frequencyType))
@@ -1388,7 +1416,7 @@ function getWeekActions(actions, project) {
 
 function getMonthActions(actions, project, today) {
   return sortActions(actions.filter((item) => {
-  if (item.stage !== project.stage || !isVisibleInWorkSections(project, item.id)) {
+ if (item.stage !== project.stage || !matchesProjectType(item, project) || !isVisibleInWorkSections(project, item.id)) {
   return false;
 }
 
@@ -1433,13 +1461,19 @@ function isCurrentWeekInCurrentMonth(today) {
 }
 
 function getStageActions(actions, project) {
-  return sortActions(actions.filter((item) => isVisibleInWorkSections(project, item.id) && item.stage === project.stage && ["once", "event"].includes(item.frequencyType)));
+  return sortActions(actions.filter((item) =>
+    isVisibleInWorkSections(project, item.id) &&
+    item.stage === project.stage &&
+    matchesProjectType(item, project) &&
+    ["once", "event"].includes(item.frequencyType)
+  ));
 }
 
 function getAllProcesses(actions, project, activeFilters) {
   return sortActions(actions.filter((item) => {
     const status = getEffectiveStatus(project, item.id);
-    return matches(item.stage, activeFilters.stage) &&
+  return matchesProjectType(item, project) &&
+  matches(item.stage, activeFilters.stage) &&
       matches(item.category, activeFilters.category) &&
       matches(item.frequencyType, activeFilters.frequencyType) &&
       matches(status, activeFilters.status) &&
@@ -1448,11 +1482,19 @@ function getAllProcesses(actions, project, activeFilters) {
 }
 
 function getOpenActions(project) {
-  return getActiveOperationalActions().filter((item) => item.stage === project.stage && isOpen(project, item.id));
+  return getActiveOperationalActions().filter((item) =>
+    item.stage === project.stage &&
+    matchesProjectType(item, project) &&
+    isOpen(project, item.id)
+  );
 }
 
 function getProjectProgress(project) {
-  const visibleActions = getActiveOperationalActions().filter((item) => item.defaultVisible && item.stage === project.stage);
+  const visibleActions = getActiveOperationalActions().filter((item) =>
+  item.defaultVisible &&
+  item.stage === project.stage &&
+  matchesProjectType(item, project)
+);
   const done = visibleActions.filter((item) => getEffectiveStatus(project, item.id) === "done").length;
   const total = visibleActions.length;
   return { done, total, percent: total ? Math.round((done / total) * 100) : 0 };
@@ -1472,7 +1514,12 @@ function getCurrentSectionProgress(project) {
 }
 
 function getProjectKpis(project) {
-  const stageActions = getActiveOperationalActions().filter((item) => item.defaultVisible && item.stage === project.stage);
+  const stageActions = getActiveOperationalActions().filter((item) =>
+    item.defaultVisible &&
+    item.stage === project.stage &&
+    matchesProjectType(item, project)
+  );
+
   return {
     open: stageActions.filter((item) => isOpen(project, item.id)).length,
     inProgress: stageActions.filter((item) => getEffectiveStatus(project, item.id) === "in_progress").length,
@@ -1514,6 +1561,9 @@ function getWeekday(date) {
 
 function matches(value, filterValue) {
   return filterValue === "all" || value === filterValue;
+}
+function matchesProjectType(actionItem, project) {
+  return actionItem.projectType === project.projectType;
 }
 
 function isFirstState() {
