@@ -76,10 +76,9 @@ const app = document.querySelector("#app");
 let state = loadState();
 let selectedProjectId = null;
 let selectedTab = "now";
-let viewerMode = "editor";
 let filters = { stage: "all", category: "all", frequencyType: "all", status: "all", priority: "all" };
 let profileError = "";
-let profileEditing = !state.userProfile.name?.trim();
+let profileEditing = !isProfileComplete(state.userProfile);
 let projectFormVisible = false;
 
 render();
@@ -92,16 +91,42 @@ function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
-      return JSON.parse(saved);
+      return normalizeState(JSON.parse(saved));
     } catch {
       localStorage.removeItem(STORAGE_KEY);
     }
   }
   const now = new Date().toISOString();
-  return {
-    userProfile: { id: makeId("user"), name: "", role: "Руководитель проекта", createdAt: now, updatedAt: now },
+  return normalizeState({
+    userProfile: { id: makeId("user"), lastName: "", firstName: "", role: "", createdAt: now, updatedAt: now },
     projects: [],
+  });
+}
+
+function normalizeState(rawState) {
+  const now = new Date().toISOString();
+  const userProfile = rawState.userProfile || {};
+  const migratedName = splitLegacyName(userProfile.name);
+  return {
+    ...rawState,
+    userProfile: {
+      id: userProfile.id || makeId("user"),
+      lastName: userProfile.lastName ?? migratedName.lastName,
+      firstName: userProfile.firstName ?? migratedName.firstName,
+      role: userProfile.role || "",
+      createdAt: userProfile.createdAt || now,
+      updatedAt: userProfile.updatedAt || now,
+    },
+    projects: Array.isArray(rawState.projects) ? rawState.projects : [],
   };
+}
+
+function splitLegacyName(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+  }
+  return { firstName: "", lastName: "" };
 }
 
 function saveState() {
@@ -112,6 +137,11 @@ function render() {
   const selectedProject = getSelectedProject();
   if (selectedProject) {
     app.innerHTML = `<section class="workspace project-workspace">${renderProjectScreen(selectedProject)}</section>`;
+    bindEvents();
+    return;
+  }
+  if (selectedProjectId) {
+    app.innerHTML = `<section class="workspace project-workspace">${renderNoAccess()}</section>`;
     bindEvents();
     return;
   }
@@ -133,7 +163,7 @@ function render() {
 
 function renderProfile() {
   const profile = state.userProfile;
-  const hasProfile = Boolean(profile.name?.trim() && profile.role?.trim());
+  const hasProfile = isProfileComplete(profile);
   if (hasProfile && !profileEditing) {
     return `
       <section class="panel">
@@ -144,7 +174,7 @@ function renderProfile() {
           </div>
         </div>
         <div class="profile-summary">
-          <strong>${escapeHtml(profile.name)}</strong>
+          <strong>${escapeHtml(getUserFullName())}</strong>
           <span>${escapeHtml(profile.role)}</span>
         </div>
         <button class="button secondary" id="editProfileButton" type="button">Редактировать профиль</button>
@@ -162,8 +192,12 @@ function renderProfile() {
       </div>
       <form class="form-grid" id="profileForm" novalidate>
         <div class="field">
-          <label for="profileName">Имя</label>
-          <input id="profileName" name="name" value="${escapeHtml(profile.name)}" placeholder="Например, Вероника Потапова" aria-required="true">
+          <label for="profileLastName">Фамилия</label>
+          <input id="profileLastName" name="lastName" value="${escapeHtml(profile.lastName)}" placeholder="Например, Потапова" aria-required="true">
+        </div>
+        <div class="field">
+          <label for="profileFirstName">Имя</label>
+          <input id="profileFirstName" name="firstName" value="${escapeHtml(profile.firstName)}" placeholder="Например, Вероника" aria-required="true">
         </div>
         <div class="field">
           <label for="profileRole">Роль</label>
@@ -183,6 +217,21 @@ function renderProfile() {
 }
 
 function renderCreateProject() {
+  if (!isProfileComplete(state.userProfile)) {
+    return `
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Новый проект</p>
+            <h2>Создание проекта</h2>
+          </div>
+        </div>
+        <p class="muted">Сначала заполните профиль, чтобы создавать проекты.</p>
+        <button class="button" type="button" disabled>Создать проект</button>
+      </section>
+    `;
+  }
+
   if (!projectFormVisible) {
     return `
       <section class="panel">
@@ -229,7 +278,8 @@ function renderCreateProject() {
 }
 
 function renderProjectsList() {
-  const cards = state.projects.map((project) => {
+  const accessibleProjects = getAccessibleProjects();
+  const cards = accessibleProjects.map((project) => {
     const progress = getProjectProgress(project);
     const openCount = getOpenActions(project).length;
     return `
@@ -259,7 +309,7 @@ function renderProjectsList() {
           <h2>Мои проекты</h2>
         </div>
       </div>
-      <div class="project-list">${cards || '<div class="empty">Пока нет проектов. Создайте первый проект слева.</div>'}</div>
+      <div class="project-list">${cards || '<div class="empty">Пока нет доступных проектов. Создайте проект или попросите добавить вас в участники.</div>'}</div>
     </section>
   `;
 }
@@ -288,6 +338,19 @@ function renderEmptyWorkspace() {
   `;
 }
 
+function renderNoAccess() {
+  return `
+    <section class="panel compact-panel">
+      <button class="button secondary" id="backToProjects" type="button">Назад к моим проектам</button>
+    </section>
+    <section class="panel">
+      <p class="eyebrow">Доступ</p>
+      <h2>У вас нет доступа к этому проекту</h2>
+      <p class="lead">Проект не найден среди проектов, которые вы создали или где вы указаны участником.</p>
+    </section>
+  `;
+}
+
 function renderWelcome() {
   return `
     <section class="panel welcome-panel">
@@ -306,7 +369,7 @@ function renderProjectScreen(project) {
   const progress = getProjectProgress(project);
   const kpis = getProjectKpis(project);
   const tabActions = getActionsForTab(project, selectedTab);
-  const readonly = viewerMode === "viewer";
+  const readonly = !canEditProject(project);
 
   return `
     <section class="panel compact-panel">
@@ -319,22 +382,8 @@ function renderProjectScreen(project) {
           <p class="eyebrow">Проект</p>
           <h2>${escapeHtml(project.title)}</h2>
         </div>
-        <div class="field">
-          <label>Смотреть как</label>
-          <select id="viewerMode">
-            <option value="editor" ${viewerMode === "editor" ? "selected" : ""}>Редактор</option>
-            <option value="viewer" ${viewerMode === "viewer" ? "selected" : ""}>Наблюдатель</option>
-          </select>
-        </div>
       </div>
-      <div class="meta-grid">
-        ${meta("Клиент", project.client)}
-        ${meta("Тип", project.projectType || "Не указан")}
-        ${meta("Стадия", STAGE_LABELS[project.stage])}
-        ${meta("Начало", formatDate(project.startDate))}
-        ${meta("Окончание", formatDate(project.endDate))}
-        ${meta("Прогресс", `${progress.done} из ${progress.total} (${progress.percent}%)`)}
-      </div>
+      ${renderProjectDetails(project, readonly, progress)}
       <div class="kpi-grid">
         ${kpi("Открытые действия", kpis.open)}
         ${kpi("В работе", kpis.inProgress)}
@@ -385,6 +434,38 @@ function renderProjectScreen(project) {
   `;
 }
 
+function renderProjectDetails(project, readonly, progress) {
+  if (readonly) {
+    return `
+      <div class="meta-grid">
+        ${meta("Клиент", project.client)}
+        ${meta("Тип", project.projectType || "Не указан")}
+        ${meta("Стадия", STAGE_LABELS[project.stage])}
+        ${meta("Начало", formatDate(project.startDate))}
+        ${meta("Окончание", formatDate(project.endDate))}
+        ${meta("Прогресс", `${progress.done} из ${progress.total} (${progress.percent}%)`)}
+      </div>
+    `;
+  }
+
+  return `
+    <form class="project-edit-grid" id="projectDetailsForm">
+      <div class="field"><label>Название проекта</label><input name="title" value="${escapeHtml(project.title)}" required></div>
+      <div class="field"><label>Клиент</label><input name="client" value="${escapeHtml(project.client)}" required></div>
+      <div class="field"><label>Тип</label><input name="projectType" value="${escapeHtml(project.projectType || "")}"></div>
+      <div class="field">
+        <label>Стадия</label>
+        <select name="stage">
+          ${Object.entries(STAGE_LABELS).map(([value, label]) => `<option value="${value}" ${project.stage === value ? "selected" : ""}>${label}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field"><label>Дата начала</label><input name="startDate" type="date" value="${escapeHtml(project.startDate || "")}"></div>
+      <div class="field"><label>Дата окончания</label><input name="endDate" type="date" value="${escapeHtml(project.endDate || "")}"></div>
+      <button class="button secondary" type="submit">Сохранить карточку</button>
+    </form>
+  `;
+}
+
 function renderParticipants(project, readonly) {
   const list = project.participants.map((participant) => `
     <div class="participant">
@@ -403,7 +484,7 @@ function renderParticipants(project, readonly) {
   return `
     <div class="participants">${list}</div>
     <form class="form-grid" id="participantForm" style="margin-top: 14px;">
-      <div class="field"><label>Имя</label><input name="name" ${readonly ? "disabled" : ""}></div>
+      <div class="field"><label>Фамилия и имя / полное имя</label><input name="name" ${readonly ? "disabled" : ""}></div>
       <div class="field"><label>Email</label><input name="email" type="email" ${readonly ? "disabled" : ""}></div>
       <div class="field">
         <label>Право доступа</label>
@@ -507,6 +588,7 @@ function selectFilter(name, label, options) {
 function bindEvents() {
   document.querySelector("#profileForm")?.addEventListener("submit", saveProfile);
   document.querySelector("#projectForm")?.addEventListener("submit", createProject);
+  document.querySelector("#projectDetailsForm")?.addEventListener("submit", updateProjectDetails);
   document.querySelector("#participantForm")?.addEventListener("submit", addParticipant);
   document.querySelector("#editProfileButton")?.addEventListener("click", () => {
     profileEditing = true;
@@ -529,17 +611,11 @@ function bindEvents() {
   document.querySelector("#backToProjects")?.addEventListener("click", () => {
     selectedProjectId = null;
     selectedTab = "now";
-    viewerMode = "editor";
     render();
   });
   document.querySelector("#startCreateProject")?.addEventListener("click", focusFirstSetupField);
   document.querySelector("#openDemoProject")?.addEventListener("click", createDemoProject);
   document.querySelector("#clearDataButton")?.addEventListener("click", clearAppData);
-  document.querySelector("#viewerMode")?.addEventListener("change", (event) => {
-    viewerMode = event.target.value;
-    render();
-  });
-
   document.querySelectorAll("[data-select-project]").forEach((button) => button.addEventListener("click", () => {
     selectedProjectId = button.dataset.selectProject;
     selectedTab = "now";
@@ -581,18 +657,20 @@ function bindEvents() {
 function saveProfile(event) {
   event.preventDefault();
   const data = new FormData(event.target);
-  const name = data.get("name").trim();
+  const lastName = data.get("lastName").trim();
+  const firstName = data.get("firstName").trim();
   const role = data.get("role");
 
-  if (!name || !ROLE_OPTIONS.includes(role)) {
-    profileError = "Заполните имя и роль";
+  if (!lastName || !firstName || !ROLE_OPTIONS.includes(role)) {
+    profileError = "Заполните фамилию, имя и роль";
     render();
     return;
   }
 
   state.userProfile = {
     ...state.userProfile,
-    name,
+    lastName,
+    firstName,
     role,
     updatedAt: new Date().toISOString(),
   };
@@ -604,9 +682,15 @@ function saveProfile(event) {
 
 function createProject(event) {
   event.preventDefault();
+  if (!isProfileComplete(state.userProfile)) {
+    profileError = "Заполните фамилию, имя и роль";
+    profileEditing = true;
+    render();
+    return;
+  }
   const data = new FormData(event.target);
   const now = new Date().toISOString();
-  const ownerName = state.userProfile.name || "Создатель проекта";
+  const ownerName = getUserFullName();
   const project = {
     id: makeId("project"),
     title: data.get("title").trim(),
@@ -629,6 +713,20 @@ function createProject(event) {
   render();
 }
 
+function updateProjectDetails(event) {
+  event.preventDefault();
+  const project = getSelectedProject();
+  if (!project || !canEditProject(project)) return;
+  const data = new FormData(event.target);
+  project.title = data.get("title").trim();
+  project.client = data.get("client").trim();
+  project.projectType = data.get("projectType").trim();
+  project.stage = data.get("stage");
+  project.startDate = data.get("startDate");
+  project.endDate = data.get("endDate");
+  touchProject(project);
+}
+
 function createDemoProject() {
   const now = new Date().toISOString();
   const userId = "demo-user-veronika";
@@ -637,7 +735,8 @@ function createDemoProject() {
   state = {
     userProfile: {
       id: userId,
-      name: "Вероника Потапова",
+      lastName: "Потапова",
+      firstName: "Вероника",
       role: "Руководитель проекта",
       createdAt: now,
       updatedAt: now,
@@ -653,7 +752,7 @@ function createDemoProject() {
         endDate: "2026-12-31",
         ownerId: userId,
         participants: [
-          { id: "demo-participant-veronika", name: "Вероника Потапова", email: "veronika@example.com", accessLevel: "editor" },
+          { id: "demo-participant-veronika", name: "Потапова Вероника", email: "veronika@example.com", accessLevel: "editor" },
           { id: "demo-participant-admin", name: "Администратор проекта", email: "admin@example.com", accessLevel: "editor" },
           { id: "demo-participant-curator", name: "Куратор проекта", email: "curator@example.com", accessLevel: "viewer" },
         ],
@@ -672,7 +771,6 @@ function createDemoProject() {
   };
   selectedProjectId = projectId;
   selectedTab = "now";
-  viewerMode = "editor";
   profileEditing = false;
   projectFormVisible = false;
   filters = { stage: "all", category: "all", frequencyType: "all", status: "all", priority: "all" };
@@ -699,7 +797,6 @@ function clearAppData() {
   state = loadState();
   selectedProjectId = null;
   selectedTab = "now";
-  viewerMode = "editor";
   profileEditing = true;
   projectFormVisible = false;
   filters = { stage: "all", category: "all", frequencyType: "all", status: "all", priority: "all" };
@@ -708,11 +805,11 @@ function clearAppData() {
 
 function focusFirstSetupField() {
   projectFormVisible = true;
-  if (!state.userProfile.name?.trim()) {
+  if (!isProfileComplete(state.userProfile)) {
     profileEditing = true;
   }
   render();
-  const target = state.userProfile.name ? document.querySelector("#projectTitle") : document.querySelector("#profileName");
+  const target = isProfileComplete(state.userProfile) ? document.querySelector("#projectTitle") : document.querySelector("#profileLastName");
   target?.focus();
   target?.scrollIntoView({ behavior: "smooth", block: "center" });
 }
@@ -722,7 +819,7 @@ function addParticipant(event) {
   const project = getSelectedProject();
   const data = new FormData(event.target);
   const name = data.get("name").trim();
-  if (!project || !name) return;
+  if (!project || !name || !canEditProject(project)) return;
   project.participants.push({ id: makeId("participant"), name, email: data.get("email").trim(), accessLevel: data.get("accessLevel") });
   touchProject(project);
 }
@@ -730,21 +827,21 @@ function addParticipant(event) {
 function updateParticipantAccess(participantId, accessLevel) {
   const project = getSelectedProject();
   const participant = project?.participants.find((item) => item.id === participantId);
-  if (!participant) return;
+  if (!participant || !canEditProject(project)) return;
   participant.accessLevel = accessLevel;
   touchProject(project);
 }
 
 function removeParticipant(participantId) {
   const project = getSelectedProject();
-  if (!project) return;
+  if (!project || !canEditProject(project)) return;
   project.participants = project.participants.filter((item) => item.id !== participantId);
   touchProject(project);
 }
 
 function updateActionStatus(actionId, status) {
   const project = getSelectedProject();
-  if (!project) return;
+  if (!project || !canEditProject(project)) return;
   const item = ensureActionStatus(project, actionId);
   item.status = status;
   item.completedAt = status === "done" ? new Date().toISOString() : null;
@@ -754,12 +851,12 @@ function updateActionStatus(actionId, status) {
 
 function updateActionComment(actionId, comment) {
   const project = getSelectedProject();
-  if (!project) return;
+  if (!project || !canEditProject(project)) return;
   const item = ensureActionStatus(project, actionId);
   item.comment = comment.trim();
   item.updatedBy = state.userProfile.id;
   if (item.comment) {
-    project.comments.push({ id: makeId("comment"), actionId, projectId: project.id, authorName: state.userProfile.name || "Пользователь", text: item.comment, createdAt: new Date().toISOString() });
+    project.comments.push({ id: makeId("comment"), actionId, projectId: project.id, authorName: getUserFullName() || "Пользователь", text: item.comment, createdAt: new Date().toISOString() });
   }
   touchProject(project);
 }
@@ -876,11 +973,59 @@ function matches(value, filterValue) {
 }
 
 function isFirstState() {
-  return !state.userProfile.name?.trim() && state.projects.length === 0;
+  return !isProfileComplete(state.userProfile) && state.projects.length === 0;
 }
 
 function getSelectedProject() {
-  return state.projects.find((project) => project.id === selectedProjectId) || null;
+  const project = state.projects.find((item) => item.id === selectedProjectId);
+  return project && canAccessProject(project) ? project : null;
+}
+
+function getAccessibleProjects() {
+  return state.projects.filter(canAccessProject);
+}
+
+function canAccessProject(project) {
+  if (!project) {
+    return false;
+  }
+  if (!isProfileComplete(state.userProfile)) {
+    return false;
+  }
+  return project.ownerId === state.userProfile.id || Boolean(getCurrentParticipant(project));
+}
+
+function canEditProject(project) {
+  if (!canAccessProject(project)) {
+    return false;
+  }
+  if (project.ownerId === state.userProfile.id) {
+    return true;
+  }
+  return getCurrentParticipant(project)?.accessLevel === "editor";
+}
+
+function getCurrentParticipant(project) {
+  const currentName = normalizePersonName(getUserFullName());
+  const legacyName = normalizePersonName(`${state.userProfile.firstName || ""} ${state.userProfile.lastName || ""}`);
+  return project.participants.find((participant) => {
+    const participantName = normalizePersonName(participant.name);
+    return participantName === currentName || participantName === legacyName;
+  });
+}
+
+function isProfileComplete(profile) {
+  return Boolean(profile?.lastName?.trim() && profile?.firstName?.trim() && ROLE_OPTIONS.includes(profile?.role));
+}
+
+function getUserFullName() {
+  const lastName = state.userProfile.lastName?.trim() || "";
+  const firstName = state.userProfile.firstName?.trim() || "";
+  return `${lastName} ${firstName}`.trim();
+}
+
+function normalizePersonName(name) {
+  return String(name || "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 function touchProject(project) {
