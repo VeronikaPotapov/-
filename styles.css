@@ -558,6 +558,39 @@ textarea {
   margin-bottom: 14px;
 }
 
+.admin-filters {
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+}
+
+.admin-actions-list {
+  display: grid;
+  gap: 12px;
+}
+
+.action-admin-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(118, 185, 205, 0.22);
+  border-radius: 10px;
+  background: rgba(14, 37, 52, 0.46);
+}
+
+.admin-action-form {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid rgba(70, 224, 219, 0.28);
+  border-radius: 12px;
+  background: rgba(10, 29, 42, 0.34);
+}
+
+.admin-action-form .wide {
+  grid-column: 1 / -1;
+}
+
 .hidden {
   display: none !important;
 }
@@ -897,4 +930,152 @@ textarea {
   min-height: 38px;
   margin-top: 4px;
   font-weight: 800;
+}
+/* ===== Compact action cards ===== */
+
+.actions-grid {
+  gap: 10px;
+}
+
+.action-card {
+  padding: 14px 18px;
+}
+
+.action-card .card-top {
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.action-card h3 {
+  font-size: 17px;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.action-card .action-summary {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.action-card .details {
+  margin-top: 8px;
+}
+
+.action-card .details summary {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.done-toggle {
+  gap: 7px;
+  margin-top: 0;
+}
+
+.done-toggle-control {
+  width: 42px;
+  height: 24px;
+}
+
+.done-toggle-control::before {
+  width: 16px;
+  height: 16px;
+}
+
+.done-toggle input:checked + .done-toggle-control::before {
+  transform: translateX(18px);
+}
+
+.done-toggle-text {
+  min-width: 92px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.details-body {
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.instruction-block {
+  padding: 10px 12px;
+}
+
+.instruction-block h4 {
+  font-size: 12px;
+}
+
+.instruction-block p {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.instruction-block textarea {
+  min-height: 62px;
+}
+
+@media (max-width: 640px) {
+  .action-card .card-top {
+    gap: 10px;
+  }
+
+  .done-toggle {
+    margin-top: 8px;
+  }
+}
+/* ===== Fix instruction blocks after compact action cards ===== */
+
+.instruction-block {
+  position: relative;
+  grid-template-columns: 190px 1fr;
+  padding: 12px 14px 12px 56px;
+  min-height: 54px;
+}
+
+.instruction-block::before {
+  left: 16px;
+  top: 14px;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.instruction-block h4 {
+  grid-column: 1;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.25;
+  word-break: normal;
+}
+
+.instruction-block p,
+.instruction-block textarea,
+.instruction-block .status-controls,
+.instruction-block a {
+  grid-column: 2;
+}
+
+.instruction-block p {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .instruction-block {
+    grid-template-columns: 1fr;
+    padding-left: 52px;
+  }
+
+  .instruction-block h4,
+  .instruction-block p,
+  .instruction-block textarea,
+  .instruction-block .status-controls,
+  .instruction-block a {
+    grid-column: 1;
+  }
+
+  .admin-filters,
+  .admin-action-form,
+  .action-admin-card {
+    grid-template-columns: 1fr;
+  }
 }
