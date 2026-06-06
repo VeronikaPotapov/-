@@ -84,7 +84,7 @@ const app = document.querySelector("#app");
 let state = loadState();
 let selectedProjectId = null;
 let selectedTab = "week";
-let filters = { stage: "all", category: "all", frequencyType: "all", status: "all", priority: "all" };
+let filters = { stage: "all", category: "all", frequencyType: "all", status: "all" };
 let adminFilters = { stage: "all", projectType: "all", category: "all", active: "all" };
 let profileError = "";
 let profileEditing = !isProfileComplete(state.userProfile);
@@ -918,13 +918,13 @@ function renderActionCard(actionItem, project, readonly, compact) {
 
 function renderFilters() {
   const categories = [...new Set(getActiveOperationalActions().map((item) => item.category))].sort();
+
   return `
     <div class="filters">
       ${selectFilter("stage", "Стадия", [["all", "Все"], ...Object.entries(STAGE_LABELS)])}
       ${selectFilter("category", "Категория", [["all", "Все"], ...categories.map((item) => [item, item])])}
       ${selectFilter("frequencyType", "Периодичность", [["all", "Все"], ...Object.entries(FREQUENCY_LABELS)])}
-      ${selectFilter("status", "Статус", [["all", "Все"], ...Object.entries(STATUS_LABELS)])}
-      ${selectFilter("priority", "Приоритет", [["all", "Все"], ...Object.entries(PRIORITY_LABELS)])}
+      ${selectFilter("status", "Статус", [["all", "Все"], ["not_done", "Не выполнено"], ["done", "Выполнено"]])}
     </div>
   `;
 }
@@ -1227,7 +1227,7 @@ function createDemoProject() {
 selectedTab = "week";
   profileEditing = false;
   projectFormVisible = false;
-  filters = { stage: "all", category: "all", frequencyType: "all", status: "all", priority: "all" };
+  filters = { stage: "all", category: "all", frequencyType: "all", status: "all" };
   saveState();
   render();
 }
@@ -1253,7 +1253,7 @@ function clearAppData() {
 selectedTab = "week";
   profileEditing = true;
   projectFormVisible = false;
-  filters = { stage: "all", category: "all", frequencyType: "all", status: "all", priority: "all" };
+  filters = { stage: "all", category: "all", frequencyType: "all", status: "all" };
   render();
 }
 
@@ -1500,12 +1500,12 @@ function getStageActions(actions, project) {
 function getAllProcesses(actions, project, activeFilters) {
   return sortActions(actions.filter((item) => {
     const status = getEffectiveStatus(project, item.id);
-  return matchesProjectType(item, project) &&
-  matches(item.stage, activeFilters.stage) &&
+
+    return matchesProjectType(item, project) &&
+      matches(item.stage, activeFilters.stage) &&
       matches(item.category, activeFilters.category) &&
       matches(item.frequencyType, activeFilters.frequencyType) &&
-      matches(status, activeFilters.status) &&
-      matches(item.priority, activeFilters.priority);
+      matchesStatus(status, activeFilters.status);
   }));
 }
 
@@ -1592,6 +1592,21 @@ function matches(value, filterValue) {
 }
 function matchesProjectType(actionItem, project) {
   return actionItem.projectType === project.projectType;
+}
+function matchesStatus(status, filterValue) {
+  if (filterValue === "all") {
+    return true;
+  }
+
+  if (filterValue === "done") {
+    return status === "done";
+  }
+
+  if (filterValue === "not_done") {
+    return status !== "done";
+  }
+
+  return status === filterValue;
 }
 
 function isFirstState() {
