@@ -92,6 +92,7 @@ let projectFormVisible = false;
 let projectEditMode = false;
 let adminMode = false;
 let adminActionFormId = null;
+let weeklyPlanMode = false;
 
 render();
 
@@ -261,6 +262,11 @@ if (adminMode) {
     bindEvents();
     return;
   }
+}
+if (weeklyPlanMode) {
+  app.innerHTML = `<section class="workspace project-workspace">${renderWeeklyPlanScreen()}</section>`;
+  bindEvents();
+  return;
 }
 
   const selectedProject = getSelectedProject();
@@ -444,10 +450,92 @@ function renderProjectsList() {
     </section>
   `;
 }
+function renderWeeklyPlanScreen() {
+  const projects = getAccessibleProjects();
+  const actions = getActiveOperationalActions();
+
+  const projectGroups = projects.map((project) => {
+    const weekActions = getWeekActions(actions, project);
+
+    return {
+      project,
+      actions: weekActions,
+    };
+  }).filter((group) => group.actions.length > 0);
+
+  const totalActions = projectGroups.reduce((sum, group) => sum + group.actions.length, 0);
+  const doneActions = projectGroups.reduce((sum, group) => {
+    return sum + group.actions.filter((item) => getEffectiveStatus(group.project, item.id) === "done").length;
+  }, 0);
+
+  const progress = {
+    done: doneActions,
+    total: totalActions,
+    percent: totalActions ? Math.round((doneActions / totalActions) * 100) : 0,
+  };
+
+  return `
+    <section class="panel compact-panel">
+      <button class="button secondary" id="backFromWeeklyPlan" type="button">← Назад к моим проектам</button>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Сводный план</p>
+          <h2>Мой план на неделю</h2>
+        </div>
+      </div>
+
+      <p class="section-note">
+        Здесь собраны действия на неделю по всем доступным проектам.
+      </p>
+
+      ${renderProgress(progress)}
+    </section>
+
+    <section class="weekly-plan-list">
+      ${
+        projectGroups.map((group) => renderWeeklyPlanProjectGroup(group.project, group.actions)).join("") ||
+        '<section class="panel"><div class="empty">На эту неделю нет актуальных действий по доступным проектам.</div></section>'
+      }
+    </section>
+  `;
+}
+
+function renderWeeklyPlanProjectGroup(project, actions) {
+  const projectProgress = {
+    done: actions.filter((item) => getEffectiveStatus(project, item.id) === "done").length,
+    total: actions.length,
+    percent: actions.length ? Math.round((actions.filter((item) => getEffectiveStatus(project, item.id) === "done").length / actions.length) * 100) : 0,
+  };
+
+  return `
+    <section class="panel weekly-project-group">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">${escapeHtml(project.client || "Проект")}</p>
+          <h2>${escapeHtml(project.title || "Без названия")}</h2>
+          <p class="section-note">
+            Тип: ${escapeHtml(project.projectType || "Не указан")} · Стадия: ${escapeHtml(STAGE_LABELS[project.stage] || project.stage)}
+          </p>
+        </div>
+        <button class="button small secondary" data-select-project="${project.id}" type="button">Открыть проект</button>
+      </div>
+
+      ${renderProgress(projectProgress)}
+
+      <div class="actions-grid weekly-actions-grid">
+        ${actions.map((item) => renderActionCard(item, project, !canEditProject(project), false)).join("")}
+      </div>
+    </section>
+  `;
+}
 
 function renderTopTools() {
   return `
     <section class="top-tools">
+      <button class="button secondary small" id="openWeeklyPlan" type="button">Мой план на неделю</button>
       ${canOpenActionsAdmin() ? '<button class="button secondary small" id="openActionsAdmin" type="button">Админка действий</button>' : ""}
       <button class="button danger small" id="clearDataButton" type="button">Очистить данные</button>
     </section>
@@ -878,12 +966,13 @@ function renderActionCard(actionItem, project, readonly, compact) {
         </div>
 
         <label class="done-toggle">
-          <input 
-            type="checkbox" 
-            data-action-toggle-done="${actionItem.id}" 
-            ${isDone ? "checked" : ""} 
-            ${readonly ? "disabled" : ""}
-          >
+       <input 
+  type="checkbox" 
+  data-action-toggle-done="${actionItem.id}"
+  data-action-project-id="${project.id}"
+  ${isDone ? "checked" : ""} 
+  ${readonly ? "disabled" : ""}
+>
           <span class="done-toggle-control"></span>
           <span class="done-toggle-text">${isDone ? "Выполнено" : "Не выполнено"}</span>
         </label>
@@ -983,6 +1072,18 @@ render();
     adminActionFormId = null;
     render();
   });
+  document.querySelector("#openWeeklyPlan")?.addEventListener("click", () => {
+  weeklyPlanMode = true;
+  selectedProjectId = null;
+  projectEditMode = false;
+  projectFormVisible = false;
+  render();
+});
+
+document.querySelector("#backFromWeeklyPlan")?.addEventListener("click", () => {
+  weeklyPlanMode = false;
+  render();
+});
   document.querySelector("#backFromActionsAdmin")?.addEventListener("click", () => {
     adminMode = false;
     adminActionFormId = null;
@@ -1021,13 +1122,14 @@ document.querySelector("#importActionsFile")?.addEventListener("change", importA
     adminFilters[select.dataset.adminFilter] = select.value;
     render();
   }));
-  document.querySelectorAll("[data-select-project]").forEach((button) => button.addEventListener("click", () => {
-selectedProjectId = button.dataset.selectProject;
-selectedTab = "week";
-projectFormVisible = false;
-projectEditMode = false;
-render();
-  }));
+document.querySelectorAll("[data-select-project]").forEach((button) => button.addEventListener("click", () => {
+  selectedProjectId = button.dataset.selectProject;
+  selectedTab = "week";
+  projectFormVisible = false;
+  projectEditMode = false;
+  weeklyPlanMode = false;
+  render();
+}));
   document.querySelectorAll("[data-delete-project]").forEach((button) => button.addEventListener("click", () => {
   deleteProject(button.dataset.deleteProject);
 }));
@@ -1040,8 +1142,12 @@ render();
   document.querySelectorAll("[data-action-status]").forEach((select) => select.addEventListener("change", () => {
     updateActionStatus(select.dataset.actionStatus, select.value);
   }));
-  document.querySelectorAll("[data-action-toggle-done]").forEach((checkbox) => checkbox.addEventListener("change", () => {
-  updateActionDoneToggle(checkbox.dataset.actionToggleDone, checkbox.checked);
+document.querySelectorAll("[data-action-toggle-done]").forEach((checkbox) => checkbox.addEventListener("change", () => {
+  updateActionDoneToggle(
+    checkbox.dataset.actionToggleDone,
+    checkbox.checked,
+    checkbox.dataset.actionProjectId
+  );
 }));
 
   document.querySelectorAll("[data-action-comment]").forEach((textarea) => textarea.addEventListener("change", () => {
@@ -1393,17 +1499,22 @@ function removeParticipant(participantId) {
   touchProject(project);
 }
 
-function updateActionStatus(actionId, status) {
-  const project = getSelectedProject();
+function updateActionStatus(actionId, status, projectId = null) {
+  const project = projectId
+    ? state.projects.find((item) => item.id === projectId && canEditProject(item))
+    : getSelectedProject();
+
   if (!project || !canEditProject(project)) return;
+
   const item = ensureActionStatus(project, actionId);
   item.status = status;
   item.completedAt = status === "done" ? new Date().toISOString() : null;
   item.updatedBy = state.userProfile.id;
+
   touchProject(project);
 }
-function updateActionDoneToggle(actionId, checked) {
-  updateActionStatus(actionId, checked ? "done" : "not_started");
+function updateActionDoneToggle(actionId, checked, projectId = null) {
+  updateActionStatus(actionId, checked ? "done" : "not_started", projectId);
 }
 
 function updateActionComment(actionId, comment) {

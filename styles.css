@@ -1168,3 +1168,16 @@ textarea {
   border-color: #d9e2e6;
   background: #f6f8f9;
 }
+.weekly-plan-list {
+  display: grid;
+  gap: 18px;
+}
+
+.weekly-project-group {
+  display: grid;
+  gap: 16px;
+}
+
+.weekly-actions-grid {
+  margin-top: 4px;
+}
