@@ -351,9 +351,8 @@ function renderWelcome() {
 }
 
 function renderProjectScreen(project) {
-  const progress = getProjectProgress(project);
-  const kpis = getProjectKpis(project);
   const tabActions = getActionsForTab(project, selectedTab);
+  const progress = getCurrentSectionProgress(project);
   const readonly = !canEditProject(project);
 
   return `
@@ -398,16 +397,17 @@ function renderProjectScreen(project) {
 </div>
         </section>
 
-        <section class="panel project-side-card">
-          <p class="eyebrow">Прогресс проекта</p>
-          <div class="side-progress-value">${progress.percent}%</div>
-          ${renderProgress(progress)}
-          <div class="side-kpis">
-            <div><span>Открытые</span><strong>${kpis.open}</strong></div>
-            <div><span>В работе</span><strong>${kpis.inProgress}</strong></div>
-            <div><span>Выполненные</span><strong>${kpis.done}</strong></div>
-          </div>
-        </section>
+ <section class="panel project-side-card">
+  <p class="eyebrow">Прогресс раздела</p>
+  <h2>${getCurrentTabTitle()}</h2>
+  <div class="side-progress-value">${progress.percent}%</div>
+  ${renderProgress(progress)}
+  <div class="side-kpis">
+    <div><span>Не выполненные</span><strong>${progress.notDone}</strong></div>
+    <div><span>Выполненные</span><strong>${progress.done}</strong></div>
+    <div><span>Всего</span><strong>${progress.total}</strong></div>
+  </div>
+</section>
       </aside>
        
 
@@ -1014,6 +1014,19 @@ function getProjectProgress(project) {
   const done = visibleActions.filter((item) => getEffectiveStatus(project, item.id) === "done").length;
   const total = visibleActions.length;
   return { done, total, percent: total ? Math.round((done / total) * 100) : 0 };
+}
+function getCurrentSectionProgress(project) {
+  const actions = getActionsForTab(project, selectedTab);
+  const total = actions.length;
+  const done = actions.filter((item) => getEffectiveStatus(project, item.id) === "done").length;
+  const notDone = actions.filter((item) => getEffectiveStatus(project, item.id) !== "done").length;
+
+  return {
+    done,
+    notDone,
+    total,
+    percent: total ? Math.round((done / total) * 100) : 0,
+  };
 }
 
 function getProjectKpis(project) {
