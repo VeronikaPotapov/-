@@ -44,6 +44,7 @@ const PRIORITY_LABELS = {
 
 const ROLE_OPTIONS = [
   "Руководитель проекта",
+  "Администратор департамента",
   "Администратор проекта/дирекции",
   "Куратор",
   "Иная роль",
@@ -245,11 +246,15 @@ function saveState() {
 }
 
 function render() {
-  if (adminMode) {
+if (adminMode) {
+  if (!canOpenActionsAdmin()) {
+    adminMode = false;
+  } else {
     app.innerHTML = `<section class="workspace">${renderActionsAdminScreen()}</section>`;
     bindEvents();
     return;
   }
+}
 
   const selectedProject = getSelectedProject();
 if (selectedProject) {
@@ -424,7 +429,7 @@ function renderProjectsList() {
 function renderTopTools() {
   return `
     <section class="top-tools">
-      <button class="button secondary small" id="openActionsAdmin" type="button">Админка действий</button>
+      ${canOpenActionsAdmin() ? '<button class="button secondary small" id="openActionsAdmin" type="button">Админка действий</button>' : ""}
       <button class="button danger small" id="clearDataButton" type="button">Очистить данные</button>
     </section>
   `;
@@ -1555,6 +1560,9 @@ function getCurrentParticipant(project) {
 
 function isProfileComplete(profile) {
   return Boolean(profile?.lastName?.trim() && profile?.firstName?.trim() && ROLE_OPTIONS.includes(profile?.role));
+}
+function canOpenActionsAdmin() {
+  return state.userProfile?.role === "Администратор департамента";
 }
 
 function getUserFullName() {
