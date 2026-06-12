@@ -526,7 +526,7 @@ function renderWeeklyPlanProjectGroup(project, actions) {
       ${renderProgress(projectProgress)}
 
       <div class="actions-grid weekly-actions-grid">
-        ${actions.map((item) => renderActionCard(item, project, !canEditProject(project), false)).join("")}
+       ${actions.map((item) => renderActionCard(item, project, false, false)).join("")}
       </div>
     </section>
   `;
@@ -952,7 +952,9 @@ function renderActionCard(actionItem, project, readonly, compact) {
   const effectiveStatus = status?.status || "not_started";
   const isDone = effectiveStatus === "done";
   const comment = status?.comment || "";
-  const dueDate = status?.dueDate || "";
+  const dueDate =
+  status?.dueDate ||
+  getAutoDueDate(actionItem);
 const dueMeta = getDueDateMeta(dueDate, effectiveStatus);
   const classes = `action-card ${effectiveStatus}`;
   const helperLink = actionItem.helperLink
@@ -1160,13 +1162,15 @@ document.querySelectorAll("[data-select-project]").forEach((button) => button.ad
   document.querySelectorAll("[data-action-status]").forEach((select) => select.addEventListener("change", () => {
     updateActionStatus(select.dataset.actionStatus, select.value);
   }));
-document.querySelectorAll("[data-action-toggle-done]").forEach((checkbox) => checkbox.addEventListener("change", () => {
-  updateActionDoneToggle(
-    checkbox.dataset.actionToggleDone,
-    checkbox.checked,
-    checkbox.dataset.actionProjectId
-  );
-}));
+document.querySelectorAll("[data-action-toggle-done]").forEach((checkbox) =>
+  checkbox.addEventListener("change", () => {
+    updateActionDoneToggle(
+      checkbox.dataset.actionToggleDone,
+      checkbox.checked,
+      checkbox.dataset.actionProjectId
+    );
+  })
+);
 
   document.querySelectorAll("[data-action-comment]").forEach((textarea) => textarea.addEventListener("change", () => {
   updateActionComment(
@@ -1828,6 +1832,49 @@ function matchesStatus(status, filterValue) {
   }
 
   return status === filterValue;
+}
+function getAutoDueDate(actionItem) {
+  if (!actionItem) return "";
+
+  if (
+    actionItem.frequencyType !== "weekly" ||
+    !actionItem.weekday
+  ) {
+    return "";
+  }
+
+  const weekdayMap = {
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6,
+    sunday: 0,
+  };
+
+  const targetDay = weekdayMap[actionItem.weekday];
+
+  if (targetDay === undefined) {
+    return "";
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const result = new Date(today);
+
+  const currentDay = today.getDay();
+
+  let diff = targetDay - currentDay;
+
+  if (diff < 0) {
+    diff += 7;
+  }
+
+  result.setDate(today.getDate() + diff);
+
+  return result.toISOString().split("T")[0];
 }
 function getDueDateMeta(dueDate, status) {
   if (!dueDate) {
